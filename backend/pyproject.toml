@@ -23,6 +23,7 @@ dependencies = [
     "pyjwt<3.0.0,>=2.8.0",
     "httptools>=0.6.2",
     "uvloop>=0.21.0",
+    "basyx-python-sdk",
 ]
 
 [tool.uv]
