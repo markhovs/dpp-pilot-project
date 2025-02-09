@@ -1,7 +1,10 @@
 import uuid
+from datetime import datetime
+from typing import Any
 
 from pydantic import EmailStr
-from sqlmodel import Field, Relationship, SQLModel
+from sqlalchemy.dialects.postgresql import JSONB
+from sqlmodel import Column, Field, Relationship, SQLModel
 
 
 # Shared properties
@@ -54,6 +57,37 @@ class UserPublic(UserBase):
 class UsersPublic(SQLModel):
     data: list[UserPublic]
     count: int
+
+
+class AASAsset(SQLModel, table=True):
+    """
+    Database model for persisting an Asset Administration Shell (AAS).
+
+    The entire AAS object (and its submodels, properties, etc.) is stored
+    as a JSON document in a JSONB column.
+    """
+
+    __tablename__ = "aas_asset"
+
+    # The primary key is a string so that we can use externally defined AAS IDs (e.g. URIs or URNs)
+    id: str = Field(
+        default_factory=lambda: str(uuid.uuid4()),
+        primary_key=True,
+        index=True,
+        sa_column_kwargs={"unique": True},
+    )
+    # The JSONB column to hold the AAS data.
+    data: dict[str, Any] = Field(sa_column=Column(JSONB, nullable=False))
+    created_at: datetime = Field(
+        default_factory=datetime.utcnow,
+        nullable=False,
+        description="Timestamp when the AAS was created.",
+    )
+    updated_at: datetime = Field(
+        default_factory=datetime.utcnow,
+        nullable=False,
+        description="Timestamp when the AAS was last updated.",
+    )
 
 
 # Shared properties
