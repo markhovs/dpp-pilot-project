@@ -90,6 +90,34 @@ class AASAsset(SQLModel, table=True):
     )
 
 
+class AASSubmodel(SQLModel, table=True):
+    """
+    Database model for persisting static submodel data.
+    The full submodel (with its properties, metadata, etc.) is stored as JSON in a JSONB column.
+    """
+
+    __tablename__ = "aas_submodel"
+
+    # We use a string primary key so that we can use externally defined submodel IDs (e.g. URIs).
+    id: str = Field(
+        primary_key=True,
+        index=True,
+        sa_column_kwargs={"unique": True},
+        default_factory=lambda: str(uuid.uuid4()),
+    )
+    data: dict[str, Any] = Field(sa_column=Column(JSONB, nullable=False))
+    created_at: datetime = Field(
+        default_factory=datetime.utcnow,
+        nullable=False,
+        description="Timestamp when the submodel was created.",
+    )
+    updated_at: datetime = Field(
+        default_factory=datetime.utcnow,
+        nullable=False,
+        description="Timestamp when the submodel was last updated.",
+    )
+
+
 # Shared properties
 class ItemBase(SQLModel):
     title: str = Field(min_length=1, max_length=255)

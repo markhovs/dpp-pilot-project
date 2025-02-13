@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 
 from app.aas import services as aas_services
-from app.api.deps import SessionDep, get_current_active_superuser
+from app.api.deps import SessionDep, get_current_active_superuser, get_current_user
 
 router = APIRouter(prefix="/aas", tags=["AAS"])
 
@@ -52,11 +52,13 @@ async def create_aas(
 
 
 # -------------------------------------------------------------------
-# Public endpoints (accessible to any user)
+# Authenticated user endpoints (authenticated users only)
 # -------------------------------------------------------------------
 
 
-@router.get("/", summary="List all AAS instances")
+@router.get(
+    "/", summary="List all AAS instances", dependencies=[Depends(get_current_user)]
+)
 async def list_all_aas(session: SessionDep):
     """
     Return a list of all stored AAS assets.
@@ -66,6 +68,11 @@ async def list_all_aas(session: SessionDep):
         return aas_services.get_all_assets(session)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+# -------------------------------------------------------------------
+# Public endpoints (accessible to any user)
+# -------------------------------------------------------------------
 
 
 @router.get("/{aas_id:path}", summary="Retrieve a specific AAS instance by ID")
@@ -78,6 +85,6 @@ async def get_aas(aas_id: str, session: SessionDep):
     Accessible to all users.
     """
     try:
-        return aas_services.get_asset_by_id(session, aas_id)
+        return aas_services.get_asset_by_id(aas_id, session)
     except ValueError as ve:
         raise HTTPException(status_code=404, detail=str(ve))
