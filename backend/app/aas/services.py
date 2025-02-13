@@ -3,11 +3,14 @@ import uuid
 
 from basyx.aas import model
 
+# Import the Session type and SQLModel select helper.
+from sqlmodel import Session, select
+
 from app.aas.serialization import serialize_aas_to_json
 from app.aas.template_loader import import_aasx_package, list_template_packages
 
-# In-memory storage for AAS instances (to be later replaced with your PostgreSQL/JSONB storage)
-aas_storage: dict[str, model.AssetAdministrationShell] = {}
+# Import your AASAsset database model from your models module.
+from app.models import AASAsset
 
 
 def list_templates() -> list[dict]:
@@ -24,7 +27,7 @@ def create_new_aas(asset_data: dict = None) -> model.AssetAdministrationShell:
     asset_data (optional) may contain:
       - "id": a custom AAS id (otherwise a unique one is generated),
       - "global_asset_id": to override the default assetInformation global_asset_id,
-      - "asset_kind": to set the asset kind (INSTANCE or TYPE).
+      - "asset_kind": to set the asset kind (e.g. INSTANCE or TYPE).
 
     Returns:
         A new AssetAdministrationShell instance.
@@ -42,30 +45,36 @@ def create_new_aas(asset_data: dict = None) -> model.AssetAdministrationShell:
 
 
 def create_asset_from_submodel_templates(
-    selected_template_ids: list[str], asset_data: dict = None
+    selected_template_ids: list[str], asset_data: dict = None, session: Session = None
 ) -> dict:
     """
     Create a new AAS asset by attaching submodels chosen by the admin.
 
-    The admin provides a list of selected template IDs (obtained from list_templates()).
-    For each template ID, the function locates the corresponding AASX package, imports the submodel(s),
-    and attaches them as ModelReferences to the new AAS.
+    The admin provides a list of selected template IDs (obtained from list_templates()). For each template ID,
+    the function locates the corresponding AASX package, imports its submodel(s), and attaches them as
+    ModelReferences to the new AAS.
 
     Args:
-        selected_template_ids: A list of template IDs (strings) representing the chosen submodels.
+        selected_template_ids: A list of template IDs representing the chosen submodels.
         asset_data: Optional dict with asset metadata.
+        session: A SQLModel Session for database persistence.
 
     Returns:
         A dictionary representation of the created AAS asset.
     """
+    if session is None:
+        raise ValueError("A valid database session must be provided.")
+
+    # Create the minimal AAS.
     new_aas = create_new_aas(asset_data)
 
-    # Build a mapping from template_id to template_path.
+    # Build a mapping from template ID to template path.
     templates = list_templates()
     template_mapping = {
         tmpl["template_id"]: tmpl["template_path"] for tmpl in templates
     }
 
+    # For each selected template, import its package and attach all submodels.
     for template_id in selected_template_ids:
         if template_id not in template_mapping:
             raise ValueError(
@@ -77,66 +86,88 @@ def create_asset_from_submodel_templates(
         except Exception as e:
             print(f"Error importing submodel from template {template_id}: {e}")
             continue
-        # Attach all submodels found in the package.
+        # Look for Submodel objects in the imported package.
         submodels = [obj for obj in object_store if isinstance(obj, model.Submodel)]
         for submodel in submodels:
             new_aas.submodel.add(model.ModelReference.from_referable(submodel))
 
-    # Store the new asset in our in-memory storage.
-    aas_storage[new_aas.id] = new_aas
-    return json.loads(serialize_aas_to_json(new_aas))
+    # Serialize the new AAS to JSON.
+    aas_json = json.loads(serialize_aas_to_json(new_aas))
+
+    # Create a new AASAsset record with the AAS data.
+    aas_record = AASAsset(id=new_aas.id, data=aas_json)
+    session.add(aas_record)
+    session.commit()
+    session.refresh(aas_record)
+
+    return aas_record.data
 
 
-def get_all_assets() -> list[dict]:
+def get_all_assets(session: Session) -> list[dict]:
     """
-    Return all stored AAS assets as dictionaries.
+    Retrieve all stored AAS assets from the database as dictionaries.
+
+    Args:
+        session: A SQLModel Session for database operations.
+
+    Returns:
+        A list of AAS assets (each as a dict).
     """
-    return [json.loads(serialize_aas_to_json(aas)) for aas in aas_storage.values()]
+    statement = select(AASAsset)
+    results = session.exec(statement).all()
+    return [record.data for record in results]
 
 
-def get_asset_by_id(aas_id: str) -> dict:
+def get_asset_by_id(aas_id: str, session: Session) -> dict:
     """
-    Retrieve a specific AAS asset by its unique identifier.
+    Retrieve a specific AAS asset by its unique identifier from the database.
 
     Args:
         aas_id: The unique identifier of the AAS.
+        session: A SQLModel Session for database operations.
 
     Returns:
         A dictionary representation of the AAS asset.
     """
-    aas_instance = aas_storage.get(aas_id)
-    if not aas_instance:
+    aas_record = session.get(AASAsset, aas_id)
+    if not aas_record:
         raise ValueError(f"No AAS found with id {aas_id}")
-    return json.loads(serialize_aas_to_json(aas_instance))
+    return aas_record.data
 
 
-if __name__ == "__main__":
-    # List available templates.
-    print("=== Available Submodel Templates ===")
-    templates = list_templates()
-    for idx, tmpl in enumerate(templates, start=1):
-        print(f"{idx}. {tmpl['template_name']} (Category: {tmpl['category']})")
-        print(f"   Template ID: {tmpl['template_id']}")
-        print(f"   idShort: {tmpl['id_short']}")
-        print(f"   Description: {tmpl.get('description')}")
-        print(f"   Template Path: {tmpl['template_path']}")
-        print("-" * 40)
+# # For testing the persistence layer from the command line.
+# if __name__ == "__main__":
+#     from app.core.db import engine, get_session  # Adjust import paths as needed.
 
-    # Simulate an admin picking one or more templates.
-    if templates:
-        # For demonstration, select the first template.
-        selected_ids = [templates[0]["template_id"], templates[1]["template_id"]]
-        new_asset = create_asset_from_submodel_templates(
-            selected_template_ids=selected_ids,
-            asset_data={
-                "global_asset_id": "http://test.com/test_asset",
-                "asset_kind": model.AssetKind.TYPE,
-                "id": "https://test.com/test_aas",
-            },
-        )
-        print("\n=== Created AAS Asset ===")
-        print(json.dumps(new_asset, indent=4))
+#     with get_session() as session:
+#         # List available templates.
+#         print("=== Available Submodel Templates ===")
+#         templates = list_templates()
+#         for idx, tmpl in enumerate(templates, start=1):
+#             print(f"{idx}. {tmpl['template_name']} (Category: {tmpl['category']})")
+#             print(f"   Template ID: {tmpl['template_id']}")
+#             print(f"   idShort: {tmpl['id_short']}")
+#             print(f"   Description: {tmpl.get('description')}")
+#             print(f"   Template Path: {tmpl['template_path']}")
+#             print("-" * 40)
 
-    print("\n=== Stored AAS Assets ===")
-    for asset in get_all_assets():
-        print(json.dumps(asset, indent=4))
+#         # Simulate an admin picking one or more submodel templates.
+#         if templates:
+#             # For demonstration, select two templates.
+#             selected_ids = [templates[0]["template_id"]]
+#             new_asset = create_asset_from_submodel_templates(
+#                 selected_template_ids=selected_ids,
+#                 asset_data={
+#                     "global_asset_id": "http://test.com/test_asset",
+#                     "asset_kind": model.AssetKind.TYPE,  # Adjust as needed.
+#                     "id": "https://test.com/test_aas",
+#                 },
+#                 session=session,
+#             )
+#             print("\n=== Created AAS Asset ===")
+#             print(json.dumps(new_asset, indent=4))
+
+#         # List all persisted assets.
+#         all_assets = get_all_assets(session)
+#         print("\n=== All Persisted AAS Assets ===")
+#         print(json.dumps(all_assets, indent=4))
