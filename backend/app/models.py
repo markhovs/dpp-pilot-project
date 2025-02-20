@@ -59,25 +59,22 @@ class UsersPublic(SQLModel):
     count: int
 
 
-class AASAsset(SQLModel, table=True):
-    """
-    Database model for persisting an Asset Administration Shell (AAS).
+class AASAssetBase(SQLModel):
+    data: dict[str, Any] | None = None
 
-    The entire AAS object (and its submodels, properties, etc.) is stored
-    as a JSON document in a JSONB column.
-    """
 
+class AASAsset(AASAssetBase, table=True):
     __tablename__ = "aas_asset"
 
-    # The primary key is a string so that we can use externally defined AAS IDs (e.g. URIs or URNs)
     id: str = Field(
         default_factory=lambda: str(uuid.uuid4()),
         primary_key=True,
         index=True,
         sa_column_kwargs={"unique": True},
     )
-    # The JSONB column to hold the AAS data.
+    # Make 'data' non-optional at the DB layer.
     data: dict[str, Any] = Field(sa_column=Column(JSONB, nullable=False))
+
     created_at: datetime = Field(
         default_factory=datetime.utcnow,
         nullable=False,
@@ -90,22 +87,49 @@ class AASAsset(SQLModel, table=True):
     )
 
 
-class AASSubmodel(SQLModel, table=True):
-    """
-    Database model for persisting static submodel data.
-    The full submodel (with its properties, metadata, etc.) is stored as JSON in a JSONB column.
-    """
+class AASAssetCreateFromTemplatesRequest(SQLModel):
+    template_ids: list[str]
+    asset_data: dict[str, Any] | None = None
 
+
+class AASAssetMetadataUpdate(SQLModel):
+    global_asset_id: str | None = None
+    description: str | None = None
+    display_name: str | None = None
+
+
+class AASAttachSubmodelsRequest(SQLModel):
+    template_ids: list[str]
+
+
+class AASAssetPublic(AASAssetBase):
+    id: str
+    # Here 'data' is not optional in the actual DB record.
+    data: dict[str, Any]
+    created_at: datetime
+    updated_at: datetime
+
+
+class AASAssetsPublic(SQLModel):
+    data: list[AASAssetPublic]
+    count: int
+
+
+class AASSubmodelBase(SQLModel):
+    data: dict[str, Any] | None = None
+
+
+class AASSubmodel(AASSubmodelBase, table=True):
     __tablename__ = "aas_submodel"
 
-    # We use a string primary key so that we can use externally defined submodel IDs (e.g. URIs).
     id: str = Field(
+        default_factory=lambda: str(uuid.uuid4()),
         primary_key=True,
         index=True,
         sa_column_kwargs={"unique": True},
-        default_factory=lambda: str(uuid.uuid4()),
     )
     data: dict[str, Any] = Field(sa_column=Column(JSONB, nullable=False))
+
     created_at: datetime = Field(
         default_factory=datetime.utcnow,
         nullable=False,
@@ -116,6 +140,85 @@ class AASSubmodel(SQLModel, table=True):
         nullable=False,
         description="Timestamp when the submodel was last updated.",
     )
+
+
+class AASSubmodelDataUpdate(SQLModel):
+    """
+    For updating property values in a submodel (the service reads `new_data`).
+    """
+
+    new_data: dict[str, Any]
+
+
+class AASSubmodelPublic(AASSubmodelBase):
+    id: str
+    data: dict[str, Any]
+    created_at: datetime
+    updated_at: datetime
+
+
+class AASSubmodelsPublic(SQLModel):
+    data: list[AASSubmodelPublic]
+    count: int
+
+
+# class AASAsset(SQLModel, table=True):
+#     """
+#     Database model for persisting an Asset Administration Shell (AAS).
+
+#     The entire AAS object (and its submodels, properties, etc.) is stored
+#     as a JSON document in a JSONB column.
+#     """
+
+#     __tablename__ = "aas_asset"
+
+#     # The primary key is a string so that we can use externally defined AAS IDs (e.g. URIs or URNs)
+#     id: str = Field(
+#         default_factory=lambda: str(uuid.uuid4()),
+#         primary_key=True,
+#         index=True,
+#         sa_column_kwargs={"unique": True},
+#     )
+#     # The JSONB column to hold the AAS data.
+#     data: dict[str, Any] = Field(sa_column=Column(JSONB, nullable=False))
+#     created_at: datetime = Field(
+#         default_factory=datetime.utcnow,
+#         nullable=False,
+#         description="Timestamp when the AAS was created.",
+#     )
+#     updated_at: datetime = Field(
+#         default_factory=datetime.utcnow,
+#         nullable=False,
+#         description="Timestamp when the AAS was last updated.",
+#     )
+
+
+# class AASSubmodel(SQLModel, table=True):
+#     """
+#     Database model for persisting static submodel data.
+#     The full submodel (with its properties, metadata, etc.) is stored as JSON in a JSONB column.
+#     """
+
+#     __tablename__ = "aas_submodel"
+
+#     # We use a string primary key so that we can use externally defined submodel IDs (e.g. URIs).
+#     id: str = Field(
+#         primary_key=True,
+#         index=True,
+#         sa_column_kwargs={"unique": True},
+#         default_factory=lambda: str(uuid.uuid4()),
+#     )
+#     data: dict[str, Any] = Field(sa_column=Column(JSONB, nullable=False))
+#     created_at: datetime = Field(
+#         default_factory=datetime.utcnow,
+#         nullable=False,
+#         description="Timestamp when the submodel was created.",
+#     )
+#     updated_at: datetime = Field(
+#         default_factory=datetime.utcnow,
+#         nullable=False,
+#         description="Timestamp when the submodel was last updated.",
+#     )
 
 
 # Shared properties

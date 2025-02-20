@@ -4,6 +4,22 @@ import type { CancelablePromise } from "./core/CancelablePromise"
 import { OpenAPI } from "./core/OpenAPI"
 import { request as __request } from "./core/request"
 import type {
+  AasListTemplatesResponse,
+  AasListAllAasResponse,
+  AasCreateAasData,
+  AasCreateAasResponse,
+  AasUpdateAasMetadataData,
+  AasUpdateAasMetadataResponse,
+  AasAttachSubmodelsData,
+  AasAttachSubmodelsResponse,
+  AasRemoveSubmodelData,
+  AasRemoveSubmodelResponse,
+  AasUpdateSubmodelDataData,
+  AasUpdateSubmodelDataResponse,
+  AasDeleteAasData,
+  AasDeleteAasResponse,
+  AasGetAasData,
+  AasGetAasResponse,
   ItemsReadItemsData,
   ItemsReadItemsResponse,
   ItemsCreateItemData,
@@ -23,6 +39,8 @@ import type {
   LoginResetPasswordResponse,
   LoginRecoverPasswordHtmlContentData,
   LoginRecoverPasswordHtmlContentResponse,
+  PrivateCreateUserData,
+  PrivateCreateUserResponse,
   UsersReadUsersData,
   UsersReadUsersResponse,
   UsersCreateUserData,
@@ -45,6 +63,223 @@ import type {
   UtilsTestEmailResponse,
   UtilsHealthCheckResponse,
 } from "./types.gen"
+
+export class AasService {
+  /**
+   * List available AASX template packages
+   * Return a list of available AASX template packages.
+   * This endpoint is available only to superusers.
+   * @returns unknown Successful Response
+   * @throws ApiError
+   */
+  public static listTemplates(): CancelablePromise<AasListTemplatesResponse> {
+    return __request(OpenAPI, {
+      method: "GET",
+      url: "/api/v1/aas/templates",
+    })
+  }
+
+  /**
+   * List all AAS instances
+   * Return a list of all stored AAS assets.
+   * Accessible to all authenticated users.
+   * @returns unknown Successful Response
+   * @throws ApiError
+   */
+  public static listAllAas(): CancelablePromise<AasListAllAasResponse> {
+    return __request(OpenAPI, {
+      method: "GET",
+      url: "/api/v1/aas/",
+    })
+  }
+
+  /**
+   * Create a new AAS from selected submodel templates
+   * Create a new AAS instance by attaching one or more submodel templates.
+   *
+   * - **template_ids**: A list of template identifiers (as defined in the template metadata) to attach.
+   * - **asset_data**: Optional additional asset metadata (e.g. custom AAS id, global asset id, asset kind).
+   *
+   * This endpoint is restricted to superusers.
+   * @param data The data for the request.
+   * @param data.requestBody
+   * @returns unknown Successful Response
+   * @throws ApiError
+   */
+  public static createAas(
+    data: AasCreateAasData,
+  ): CancelablePromise<AasCreateAasResponse> {
+    return __request(OpenAPI, {
+      method: "POST",
+      url: "/api/v1/aas/",
+      body: data.requestBody,
+      mediaType: "application/json",
+      errors: {
+        422: "Validation Error",
+      },
+    })
+  }
+
+  /**
+   * Update metadata on an AAS instance
+   * Update metadata on an AAS instance.
+   * Allowed fields include asset_information fields, description, display_name, etc.
+   * This endpoint is restricted to admins.
+   * @param data The data for the request.
+   * @param data.aasId
+   * @param data.requestBody
+   * @returns unknown Successful Response
+   * @throws ApiError
+   */
+  public static updateAasMetadata(
+    data: AasUpdateAasMetadataData,
+  ): CancelablePromise<AasUpdateAasMetadataResponse> {
+    return __request(OpenAPI, {
+      method: "PATCH",
+      url: "/api/v1/aas/{aas_id}/metadata",
+      path: {
+        aas_id: data.aasId,
+      },
+      body: data.requestBody,
+      mediaType: "application/json",
+      errors: {
+        422: "Validation Error",
+      },
+    })
+  }
+
+  /**
+   * Attach new submodel(s) to an existing AAS asset
+   * Attach new submodel instance(s) (derived from the provided template IDs) to the specified AAS asset.
+   *
+   * This endpoint is restricted to superusers.
+   * @param data The data for the request.
+   * @param data.aasId
+   * @param data.requestBody
+   * @returns unknown Successful Response
+   * @throws ApiError
+   */
+  public static attachSubmodels(
+    data: AasAttachSubmodelsData,
+  ): CancelablePromise<AasAttachSubmodelsResponse> {
+    return __request(OpenAPI, {
+      method: "PATCH",
+      url: "/api/v1/aas/{aas_id}/submodels/attach",
+      path: {
+        aas_id: data.aasId,
+      },
+      body: data.requestBody,
+      mediaType: "application/json",
+      errors: {
+        422: "Validation Error",
+      },
+    })
+  }
+
+  /**
+   * Remove a submodel from an AAS
+   * Remove a specific submodel (by its ID) from an existing AAS.
+   * @param data The data for the request.
+   * @param data.aasId
+   * @param data.submodelId
+   * @returns unknown Successful Response
+   * @throws ApiError
+   */
+  public static removeSubmodel(
+    data: AasRemoveSubmodelData,
+  ): CancelablePromise<AasRemoveSubmodelResponse> {
+    return __request(OpenAPI, {
+      method: "DELETE",
+      url: "/api/v1/aas/{aas_id}/submodels/{submodel_id}",
+      path: {
+        aas_id: data.aasId,
+        submodel_id: data.submodelId,
+      },
+      errors: {
+        422: "Validation Error",
+      },
+    })
+  }
+
+  /**
+   * Update data on a submodel instance for a given AAS
+   * Update data on a specific submodel instance (e.g. property values or dynamic data) for a given AAS.
+   * @param data The data for the request.
+   * @param data.aasId
+   * @param data.submodelId
+   * @param data.requestBody
+   * @returns unknown Successful Response
+   * @throws ApiError
+   */
+  public static updateSubmodelData(
+    data: AasUpdateSubmodelDataData,
+  ): CancelablePromise<AasUpdateSubmodelDataResponse> {
+    return __request(OpenAPI, {
+      method: "PATCH",
+      url: "/api/v1/aas/{aas_id}/submodels/{submodel_id}",
+      path: {
+        aas_id: data.aasId,
+        submodel_id: data.submodelId,
+      },
+      body: data.requestBody,
+      mediaType: "application/json",
+      errors: {
+        422: "Validation Error",
+      },
+    })
+  }
+
+  /**
+   * Delete an AAS instance (cascade deletion of submodels)
+   * Delete an AAS asset and all its associated submodels.
+   * This endpoint is restricted to admins.
+   * @param data The data for the request.
+   * @param data.aasId
+   * @returns unknown Successful Response
+   * @throws ApiError
+   */
+  public static deleteAas(
+    data: AasDeleteAasData,
+  ): CancelablePromise<AasDeleteAasResponse> {
+    return __request(OpenAPI, {
+      method: "DELETE",
+      url: "/api/v1/aas/{aas_id}",
+      path: {
+        aas_id: data.aasId,
+      },
+      errors: {
+        422: "Validation Error",
+      },
+    })
+  }
+
+  /**
+   * Retrieve a specific AAS instance by ID
+   * Retrieve a single AAS instance by its unique identifier.
+   *
+   * The use of the ":path" parameter ensures that IDs containing slashes (e.g. URL‐like IDs)
+   * are captured correctly.
+   * Accessible to all users.
+   * @param data The data for the request.
+   * @param data.aasId
+   * @returns unknown Successful Response
+   * @throws ApiError
+   */
+  public static getAas(
+    data: AasGetAasData,
+  ): CancelablePromise<AasGetAasResponse> {
+    return __request(OpenAPI, {
+      method: "GET",
+      url: "/api/v1/aas/{aas_id}",
+      path: {
+        aas_id: data.aasId,
+      },
+      errors: {
+        422: "Validation Error",
+      },
+    })
+  }
+}
 
 export class ItemsService {
   /**
@@ -265,6 +500,30 @@ export class LoginService {
       path: {
         email: data.email,
       },
+      errors: {
+        422: "Validation Error",
+      },
+    })
+  }
+}
+
+export class PrivateService {
+  /**
+   * Create User
+   * Create a new user.
+   * @param data The data for the request.
+   * @param data.requestBody
+   * @returns UserPublic Successful Response
+   * @throws ApiError
+   */
+  public static createUser(
+    data: PrivateCreateUserData,
+  ): CancelablePromise<PrivateCreateUserResponse> {
+    return __request(OpenAPI, {
+      method: "POST",
+      url: "/api/v1/private/users/",
+      body: data.requestBody,
+      mediaType: "application/json",
       errors: {
         422: "Validation Error",
       },
