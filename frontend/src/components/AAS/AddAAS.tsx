@@ -182,7 +182,6 @@ const AddAAS: React.FC<AddAASProps> = ({ isOpen, onClose }) => {
             variant="primary"
             type="submit"
             isLoading={isSubmitting}
-            isDisabled={selectedTemplates.length === 0}
           >
             Save
           </Button>

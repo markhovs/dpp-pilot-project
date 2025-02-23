@@ -11,12 +11,14 @@ import {
   Thead,
   Tr,
   IconButton,
+  VStack,
+  Box,
 } from "@chakra-ui/react"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { createFileRoute, Link } from "@tanstack/react-router"
 import { FiEye } from "react-icons/fi";
 
-import { AasService, type AasListAllAasResponse, type UserPublic } from "../../client"
+import { AasService, type UserPublic } from "../../client"
 import ActionsMenu from "../../components/Common/ActionsMenu"
 import Navbar from "../../components/Common/Navbar"
 import AddAAS from "../../components/AAS/AddAAS"
@@ -81,8 +83,7 @@ function AasTable() {
             <Th>Global Asset ID</Th>
             <Th>Display Name</Th>
             <Th>Submodels</Th>
-            {currentUser?.is_superuser && <Th>Actions</Th>}
-            <Th>View</Th> {/* Add this column */}
+            <Th>{currentUser?.is_superuser ? 'Actions' : 'View'}</Th>
           </Tr>
         </Thead>
         {isPending ? (
@@ -112,20 +113,19 @@ function AasTable() {
       <Td isTruncated maxWidth="200px">{aas.displayName}</Td>
       <Td>{aas.submodelCount}</Td>
       <Td>
-        <IconButton
-          as={Link}
-          to={`/aas/${aas.id}`}
-          icon={<FiEye />}
-          aria-label="View Instance"
-          variant="ghost"
-          size="sm"
-        />
-      </Td>
-      {currentUser?.is_superuser && (
-        <Td>
+        {currentUser?.is_superuser ? (
           <ActionsMenu type="AAS" value={aas} />
-        </Td>
-      )}
+        ) : (
+          <IconButton
+            as={Link}
+            to={`/aas/${aas.id}`}
+            icon={<FiEye />}
+            aria-label="View Instance"
+            variant="ghost"
+            size="sm"
+          />
+        )}
+      </Td>
     </Tr>
   ))}
 </Tbody>
@@ -141,11 +141,18 @@ function Dashboard() {
 
   return (
     <Container maxW="full">
-      <Heading size="lg" textAlign={{ base: "center", md: "left" }} pt={12}>
-        AAS Management
-      </Heading>
-      {currentUser?.is_superuser && <Navbar type="AAS" addModalAs={AddAAS} />}
-      <AasTable />
+      <VStack align="stretch" spacing={8}>
+        <Heading size="lg" textAlign={{ base: "center", md: "left" }} pt={12}>
+          AAS Management
+        </Heading>
+
+        <Box>
+          {currentUser?.is_superuser && <Navbar type="AAS" addModalAs={AddAAS} />}
+          <Box mt={6}>
+            <AasTable />
+          </Box>
+        </Box>
+      </VStack>
     </Container>
-  )
+  );
 }

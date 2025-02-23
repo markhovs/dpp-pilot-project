@@ -20,13 +20,16 @@ import { useDisclosure } from "@chakra-ui/react";
 import { useQueryClient } from '@tanstack/react-query';
 import SubmodelElement from "./SubmodelElement";
 import { AasService } from "../../client";
+import useCustomToast from "../../hooks/useCustomToast";
 
 interface SubmodelItemProps {
   submodel: any;
   aasId: string;
+  isSuperUser?: boolean;
 }
 
 const SubmodelItem = ({ submodel, aasId }: SubmodelItemProps) => {
+  const showToast = useCustomToast();
   const queryClient = useQueryClient();
   const { isOpen, onToggle } = useDisclosure();
   const [isEditing, setIsEditing] = useState(false);
@@ -58,8 +61,19 @@ const SubmodelItem = ({ submodel, aasId }: SubmodelItemProps) => {
       await queryClient.invalidateQueries({ queryKey: ['aas', aasId] });
       setIsEditing(false);
       setEditedValues({});
+      showToast(
+        "Success!",
+        "Submodel values updated successfully.",
+        "success"
+      );
     } catch (error) {
       console.error("Failed to update submodel:", error);
+      showToast(
+        "Error",
+        "Failed to update submodel values. Please try again.",
+        "error"
+      );
+      // Keep edit mode active when there's an error
     }
   };
 
@@ -76,17 +90,25 @@ const SubmodelItem = ({ submodel, aasId }: SubmodelItemProps) => {
       _hover={{ borderColor: useColorModeValue("gray.300", "gray.500") }}
     >
       <HStack justify="space-between" align="start" spacing={4}>
-        <VStack align="start" spacing={1}>
-          <Text fontWeight="bold" fontSize="lg">
-            {submodel.idShort ?? "Unnamed Submodel"}
-          </Text>
-          <Text fontSize="sm" color={textColor}>
-            {submodel.description?.find((d: any) => d.language === "en")?.text}
-          </Text>
-          <Text fontSize="xs" color={textColor} fontFamily="monospace">
-            ID: {submodel.id}
-          </Text>
-        </VStack>
+        <Box
+          flex={1}
+          cursor="pointer"
+          onClick={onToggle}
+          _hover={{ opacity: 0.8 }}
+          transition="opacity 0.2s"
+        >
+          <VStack align="start" spacing={1}>
+            <Text fontWeight="bold" fontSize="lg">
+              {submodel.idShort ?? "Unnamed Submodel"}
+            </Text>
+            <Text fontSize="sm" color={textColor}>
+              {submodel.description?.find((d: any) => d.language === "en")?.text}
+            </Text>
+            <Text fontSize="xs" color={textColor} fontFamily="monospace">
+              ID: {submodel.id}
+            </Text>
+          </VStack>
+        </Box>
 
         <HStack spacing={2}>
           {isEditing ? (
@@ -109,8 +131,11 @@ const SubmodelItem = ({ submodel, aasId }: SubmodelItemProps) => {
             <IconButton
               icon={<EditIcon />}
               aria-label="Edit"
-              onClick={() => setIsEditing(true)}
-              size="md"  // Changed from sm
+              onClick={(e) => {
+                e.stopPropagation(); // Prevent triggering collapse
+                setIsEditing(true);
+              }}
+              size="md"
               variant="ghost"
               _hover={{ bg: useColorModeValue("gray.100", "gray.700") }}
             />
@@ -118,7 +143,10 @@ const SubmodelItem = ({ submodel, aasId }: SubmodelItemProps) => {
           <IconButton
             icon={isOpen ? <ChevronUpIcon /> : <ChevronDownIcon />}
             aria-label="Toggle Details"
-            onClick={onToggle}
+            onClick={(e) => {
+              e.stopPropagation(); // Prevent double-triggering
+              onToggle();
+            }}
             variant="ghost"
             size="md"  // Changed from sm
             _hover={{ bg: useColorModeValue("gray.100", "gray.700") }}

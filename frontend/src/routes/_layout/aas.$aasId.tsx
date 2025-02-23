@@ -26,9 +26,15 @@ const AasDetails = () => {
       </Button>
 
       <Heading size="lg" mb={2}>{aasData.displayName?.[0]?.text ?? "Unnamed AAS"}</Heading>
-      <Text fontSize="md" color="gray.600" mb={6}>
+      <Text fontSize="md" color="gray.600" mb={2}>
         Global Asset ID: {aasData.assetInformation?.globalAssetId ?? "N/A"}
       </Text>
+
+      {aasData.description?.[0]?.text && (
+        <Text fontSize="md" color="gray.500" mb={6}>
+          {aasData.description[0].text}
+        </Text>
+      )}
 
       <Box>
         <Heading size="md" display="inline-block">Submodels</Heading>

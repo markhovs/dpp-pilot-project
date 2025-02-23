@@ -55,25 +55,38 @@ const SubmodelElement = ({
       transition="all 0.2s"
       _hover={{ borderColor: useColorModeValue("gray.300", "gray.500") }}
     >
-      <HStack justify="space-between">
-        <Text fontWeight="medium" color={textColor}>{elemData.idShort}</Text>
+      <Box
+        onClick={onToggle}
+        cursor={isCollection ? "pointer" : "default"}
+        _hover={isCollection ? { opacity: 0.8 } : undefined}
+        transition="opacity 0.2s"
+      >
+        <HStack justify="space-between">
+          <Text fontWeight="medium" color={textColor}>
+            {elemData.idShort}
+          </Text>
 
-        {isCollection && (
-          <IconButton
-            icon={isOpen ? <ChevronUpIcon /> : <ChevronDownIcon />}
-            aria-label="Toggle Submodel Details"
-            onClick={onToggle}
-            variant="ghost"
-          />
+          {isCollection && (
+            <IconButton
+              icon={isOpen ? <ChevronUpIcon /> : <ChevronDownIcon />}
+              aria-label="Toggle Details"
+              onClick={(e) => {
+                e.stopPropagation(); // Prevent double-triggering
+                onToggle();
+              }}
+              variant="ghost"
+              size="sm"
+            />
+          )}
+        </HStack>
+
+        {/* Single description section */}
+        {elemData.description && (
+          <Text fontSize="sm" color={mutedColor} mt={1}>
+            {elemData.description.find((d: any) => d.language === "en")?.text}
+          </Text>
         )}
-      </HStack>
-
-      {/* Show All Descriptions */}
-      {elemData.description && (
-        <Text fontSize="sm" color={mutedColor} mt={1}>
-          {elemData.description.find((d: any) => d.language === "en")?.text}
-        </Text>
-      )}
+      </Box>
 
       {/* Display Multi-Language Property */}
       {isMultiLang && elemData.value && Array.isArray(elemData.value) && (

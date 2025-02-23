@@ -279,7 +279,11 @@ def update_submodel_data(
                 # For standard Property
                 if getattr(elem, "value_type", None) == Date:
                     try:
-                        elem.value = from_xsd(new_val, Date)
+                        # Ensure the date is in the correct format (YYYY-MM-DD)
+                        formatted_date = datetime.strptime(
+                            new_val, "%m/%d/%Y"
+                        ).strftime("%Y-%m-%d")
+                        elem.value = from_xsd(formatted_date, Date)
                     except Exception as e:
                         raise ValueError(f"Could not convert {new_val} to Date: {e}")
                 else:
