@@ -46,14 +46,21 @@ def create_asset_from_templates(
     Create a new AAS asset by instantiating submodels from selected templates.
     """
     # 1. Create a new AAS shell with a generated identifier.
-    new_aas_id = asset_data.get("id") or uuid_gen.generate_id()
+    new_aas_id = uuid_gen.generate_id()
     aas_shell = model.AssetAdministrationShell(
         id_=new_aas_id,
         asset_information=model.AssetInformation(
             global_asset_id=asset_data.get("global_asset_id", "urn:default:global"),
-            asset_kind=asset_data.get("asset_kind", model.AssetKind.INSTANCE),
+            asset_kind=model.AssetKind.INSTANCE,
         ),
     )
+
+    if "description" in asset_data:
+        aas_shell.description = [{"language": "en", "text": asset_data["description"]}]
+    if "display_name" in asset_data:
+        aas_shell.display_name = [
+            {"language": "en", "text": asset_data["display_name"]}
+        ]
 
     templates = list_template_packages()
     template_map = {tmpl["template_id"]: tmpl for tmpl in templates}
@@ -225,7 +232,9 @@ def update_submodel_data(
         results = []
 
         # If it's a Property or MLP, collect it
-        if isinstance(element, model.Property | model.MultiLanguageProperty):
+        if isinstance(
+            element, model.Property | model.MultiLanguageProperty | model.File
+        ):
             results.append(element)
             return results
 

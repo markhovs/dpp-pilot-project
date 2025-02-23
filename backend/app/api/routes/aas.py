@@ -44,7 +44,7 @@ async def create_aas(body: AASAssetCreateFromTemplatesRequest, session: SessionD
     """
     Create a new AAS instance by attaching one or more submodel templates.
     - **template_ids**: A list of template identifiers (as defined in the template metadata) to attach.
-    - **asset_data**: Optional additional asset metadata (e.g. custom AAS id, global asset id, asset kind).
+    - **asset_data**: Optional additional asset metadata (e.g. global asset id, display name, description).
     This endpoint is restricted to superusers.
     """
     try:

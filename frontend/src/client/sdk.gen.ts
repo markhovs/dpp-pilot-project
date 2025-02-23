@@ -81,7 +81,7 @@ export class AasService {
 
   /**
    * List all AAS instances
-   * Return a list of all stored AAS assets.
+   * Return a list of all stored AAS assets (each asset is returned as raw AAS JSON).
    * Accessible to all authenticated users.
    * @returns unknown Successful Response
    * @throws ApiError
@@ -96,10 +96,8 @@ export class AasService {
   /**
    * Create a new AAS from selected submodel templates
    * Create a new AAS instance by attaching one or more submodel templates.
-   *
    * - **template_ids**: A list of template identifiers (as defined in the template metadata) to attach.
    * - **asset_data**: Optional additional asset metadata (e.g. custom AAS id, global asset id, asset kind).
-   *
    * This endpoint is restricted to superusers.
    * @param data The data for the request.
    * @param data.requestBody
@@ -122,9 +120,7 @@ export class AasService {
 
   /**
    * Update metadata on an AAS instance
-   * Update metadata on an AAS instance.
-   * Allowed fields include asset_information fields, description, display_name, etc.
-   * This endpoint is restricted to admins.
+   * Update metadata on an AAS instance
    * @param data The data for the request.
    * @param data.aasId
    * @param data.requestBody
@@ -151,7 +147,6 @@ export class AasService {
   /**
    * Attach new submodel(s) to an existing AAS asset
    * Attach new submodel instance(s) (derived from the provided template IDs) to the specified AAS asset.
-   *
    * This endpoint is restricted to superusers.
    * @param data The data for the request.
    * @param data.aasId
@@ -256,10 +251,6 @@ export class AasService {
   /**
    * Retrieve a specific AAS instance by ID
    * Retrieve a single AAS instance by its unique identifier.
-   *
-   * The use of the ":path" parameter ensures that IDs containing slashes (e.g. URL‐like IDs)
-   * are captured correctly.
-   * Accessible to all users.
    * @param data The data for the request.
    * @param data.aasId
    * @returns unknown Successful Response

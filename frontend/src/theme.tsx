@@ -9,8 +9,8 @@ const disabledStyles = {
 const theme = extendTheme({
   colors: {
     ui: {
-      main: "#009688",
-      secondary: "#EDF2F7",
+      main: "#31469a",
+      secondary: "#B3B4BD",
       success: "#48BB78",
       danger: "#E53E3E",
       light: "#FAFAFA",
@@ -26,7 +26,7 @@ const theme = extendTheme({
           backgroundColor: "ui.main",
           color: "ui.light",
           _hover: {
-            backgroundColor: "#00766C",
+            backgroundColor: "#B3B4BD",
           },
           _disabled: {
             ...disabledStyles,

@@ -6,23 +6,34 @@ import {
   MenuList,
   useDisclosure,
 } from "@chakra-ui/react"
+import { Link } from "@tanstack/react-router"
 import { BsThreeDotsVertical } from "react-icons/bs"
-import { FiEdit, FiTrash } from "react-icons/fi"
+import { FiEdit, FiTrash, FiEye } from "react-icons/fi"
 
-import type { ItemPublic, UserPublic } from "../../client"
 import EditUser from "../Admin/EditUser"
 import EditItem from "../Items/EditItem"
+import EditAAS from "../AAS/EditAAS"
 import Delete from "./DeleteAlert"
 
-interface ActionsMenuProps {
-  type: string
-  value: ItemPublic | UserPublic
+// Define a flexible type for ActionsMenu props
+interface ActionsMenuProps<T extends { id: string }> {
+  type: "User" | "Item" | "AAS" // Extend as needed
+  value: T
   disabled?: boolean
 }
 
-const ActionsMenu = ({ type, value, disabled }: ActionsMenuProps) => {
-  const editUserModal = useDisclosure()
+// Map entity types to their respective Edit components
+const editComponents: Record<ActionsMenuProps<any>["type"], React.FC<any> | undefined> = {
+  User: EditUser,
+  Item: EditItem,
+  AAS: EditAAS,
+}
+
+const ActionsMenu = <T extends { id: string }>({ type, value, disabled }: ActionsMenuProps<T>) => {
+  const editModal = useDisclosure()
   const deleteModal = useDisclosure()
+
+  const EditComponent = editComponents[type] // Now TypeScript recognizes it can be undefined
 
   return (
     <>
@@ -34,12 +45,20 @@ const ActionsMenu = ({ type, value, disabled }: ActionsMenuProps) => {
           variant="unstyled"
         />
         <MenuList>
-          <MenuItem
-            onClick={editUserModal.onOpen}
-            icon={<FiEdit fontSize="16px" />}
-          >
-            Edit {type}
-          </MenuItem>
+          {type === "AAS" && (
+            <MenuItem
+              as={Link}
+              to={`/aas/${value.id}`}
+              icon={<FiEye fontSize="16px" />}
+            >
+              View Instance
+            </MenuItem>
+          )}
+          {EditComponent && (
+            <MenuItem onClick={editModal.onOpen} icon={<FiEdit fontSize="16px" />}>
+              Edit {type}
+            </MenuItem>
+          )}
           <MenuItem
             onClick={deleteModal.onOpen}
             icon={<FiTrash fontSize="16px" />}
@@ -48,19 +67,21 @@ const ActionsMenu = ({ type, value, disabled }: ActionsMenuProps) => {
             Delete {type}
           </MenuItem>
         </MenuList>
-        {type === "User" ? (
-          <EditUser
-            user={value as UserPublic}
-            isOpen={editUserModal.isOpen}
-            onClose={editUserModal.onClose}
-          />
-        ) : (
-          <EditItem
-            item={value as ItemPublic}
-            isOpen={editUserModal.isOpen}
-            onClose={editUserModal.onClose}
+
+        {/* Render correct Edit component dynamically */}
+        {EditComponent && (
+          <EditComponent
+            isOpen={editModal.isOpen}
+            onClose={editModal.onClose}
+            {...(type === "User"
+              ? { user: value }
+              : type === "Item"
+              ? { item: value }
+              : { aas: value })}
           />
         )}
+
+        {/* Render Delete Modal */}
         <Delete
           type={type}
           id={value.id}
