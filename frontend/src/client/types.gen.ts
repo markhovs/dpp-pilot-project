@@ -191,6 +191,7 @@ export type AasRemoveSubmodelResponse = {
 }
 
 export type AasUpdateSubmodelDataData = {
+  aasId: string
   requestBody: AASSubmodelDataUpdate
   submodelId: string
 }

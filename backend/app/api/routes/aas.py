@@ -180,14 +180,14 @@ async def get_aas(aas_id: str, session: SessionDep):
     response_model=dict[str, Any],
 )
 async def update_submodel_data(
-    submodel_id: str, body: AASSubmodelDataUpdate, session: SessionDep
+    aas_id: str, submodel_id: str, body: AASSubmodelDataUpdate, session: SessionDep
 ):
     """
     Update data on a specific submodel instance (e.g. property values or dynamic data) for a given AAS.
     """
     try:
         updated_submodel = aas_services.update_submodel_data(
-            submodel_id, body.new_data, session
+            aas_id, submodel_id, body.new_data, session
         )
         return updated_submodel
     except Exception as e:

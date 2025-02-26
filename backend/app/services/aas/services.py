@@ -206,8 +206,19 @@ def update_asset_metadata(aas_id: str, new_metadata: dict, session: Session) -> 
     return updated_json
 
 
-def update_submodel_data(submodel_id: str, new_data: dict, session: Session) -> dict:
+def update_submodel_data(
+    aas_id: str, submodel_id: str, new_data: dict, session: Session
+) -> dict:
     """Update property values on a submodel instance using BaSyx's native traversal."""
+    # Verify AAS exists and submodel belongs to it
+    asset_record = session.get(AASAsset, aas_id)
+    if not asset_record:
+        raise ValueError(f"No asset found with id '{aas_id}'.")
+
+    aas_shell = deserialize_aas_from_json(json.dumps(asset_record.data))
+    if not any(ref.key[0].value == submodel_id for ref in aas_shell.submodel):
+        raise ValueError(f"Submodel '{submodel_id}' is not part of AAS '{aas_id}'.")
+
     sub_record = session.get(AASSubmodel, submodel_id)
     if not sub_record:
         raise ValueError(f"No submodel found with id '{submodel_id}'.")

@@ -196,6 +196,7 @@ export class AasService {
    * Update data on a submodel instance for a given AAS
    * Update data on a specific submodel instance (e.g. property values or dynamic data) for a given AAS.
    * @param data The data for the request.
+   * @param data.aasId
    * @param data.submodelId
    * @param data.requestBody
    * @returns unknown Successful Response
@@ -208,6 +209,7 @@ export class AasService {
       method: "PATCH",
       url: "/api/v1/aas/{aas_id}/submodels/{submodel_id}",
       path: {
+        aas_id: data.aasId,
         submodel_id: data.submodelId,
       },
       body: data.requestBody,
