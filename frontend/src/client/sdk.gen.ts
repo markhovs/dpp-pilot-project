@@ -20,6 +20,12 @@ import type {
   AasDeleteAasResponse,
   AasGetAasData,
   AasGetAasResponse,
+  DppListDppSectionsData,
+  DppListDppSectionsResponse,
+  DppGetDppSectionData,
+  DppGetDppSectionResponse,
+  DppDownloadCompleteDppData,
+  DppDownloadCompleteDppResponse,
   LoginLoginAccessTokenData,
   LoginLoginAccessTokenResponse,
   LoginTestTokenResponse,
@@ -190,7 +196,6 @@ export class AasService {
    * Update data on a submodel instance for a given AAS
    * Update data on a specific submodel instance (e.g. property values or dynamic data) for a given AAS.
    * @param data The data for the request.
-   * @param data.aasId
    * @param data.submodelId
    * @param data.requestBody
    * @returns unknown Successful Response
@@ -203,7 +208,6 @@ export class AasService {
       method: "PATCH",
       url: "/api/v1/aas/{aas_id}/submodels/{submodel_id}",
       path: {
-        aas_id: data.aasId,
         submodel_id: data.submodelId,
       },
       body: data.requestBody,
@@ -254,6 +258,106 @@ export class AasService {
       url: "/api/v1/aas/{aas_id}",
       path: {
         aas_id: data.aasId,
+      },
+      errors: {
+        422: "Validation Error",
+      },
+    })
+  }
+}
+
+export class DppService {
+  /**
+   * List available DPP sections
+   * Get available DPP sections and their metadata.
+   *
+   * Args:
+   * aas_id: ID of the AAS to generate DPP for
+   * session: Database session dependency
+   *
+   * Returns:
+   * List of available DPP sections with their status
+   * @param data The data for the request.
+   * @param data.aasId
+   * @returns DPPSectionInfo Successful Response
+   * @throws ApiError
+   */
+  public static listDppSections(
+    data: DppListDppSectionsData,
+  ): CancelablePromise<DppListDppSectionsResponse> {
+    return __request(OpenAPI, {
+      method: "GET",
+      url: "/api/v1/dpp/{aas_id}/sections",
+      path: {
+        aas_id: data.aasId,
+      },
+      errors: {
+        422: "Validation Error",
+      },
+    })
+  }
+
+  /**
+   * Get DPP section content
+   * Get detailed content for a specific DPP section.
+   *
+   * Args:
+   * aas_id: ID of the AAS
+   * section_id: ID of the section to retrieve
+   * session: Database session dependency
+   *
+   * Returns:
+   * Detailed content of the requested DPP section
+   * @param data The data for the request.
+   * @param data.aasId
+   * @param data.sectionId
+   * @returns DPPSection Successful Response
+   * @throws ApiError
+   */
+  public static getDppSection(
+    data: DppGetDppSectionData,
+  ): CancelablePromise<DppGetDppSectionResponse> {
+    return __request(OpenAPI, {
+      method: "GET",
+      url: "/api/v1/dpp/{aas_id}/section/{section_id}",
+      path: {
+        aas_id: data.aasId,
+        section_id: data.sectionId,
+      },
+      errors: {
+        422: "Validation Error",
+      },
+    })
+  }
+
+  /**
+   * Download complete DPP
+   * Download complete DPP in requested format.
+   *
+   * Args:
+   * aas_id: ID of the AAS to generate DPP for
+   * format: Output format (default: json)
+   * session: Database session dependency
+   *
+   * Returns:
+   * Complete DPP document with all available sections
+   * @param data The data for the request.
+   * @param data.aasId
+   * @param data.format
+   * @returns CompleteDPP Successful Response
+   * @throws ApiError
+   */
+  public static downloadCompleteDpp(
+    data: DppDownloadCompleteDppData,
+  ): CancelablePromise<DppDownloadCompleteDppResponse> {
+    return __request(OpenAPI, {
+      method: "GET",
+      url: "/api/v1/dpp/{aas_id}/download",
+      path: {
+        aas_id: data.aasId,
+      },
+      query: {
+        format: data.format,
       },
       errors: {
         422: "Validation Error",

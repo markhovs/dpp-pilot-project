@@ -103,7 +103,6 @@ class AASAttachSubmodelsRequest(SQLModel):
 
 class AASAssetPublic(AASAssetBase):
     id: str
-    # Here 'data' is not optional in the actual DB record.
     data: dict[str, Any]
     created_at: datetime
     updated_at: datetime
@@ -159,6 +158,34 @@ class AASSubmodelPublic(AASSubmodelBase):
 class AASSubmodelsPublic(SQLModel):
     data: list[AASSubmodelPublic]
     count: int
+
+
+# DPP Models
+class DPPSection(SQLModel):
+    """Content of a DPP section"""
+
+    title: str
+    data: dict[str, Any]
+    metadata: dict[str, Any] | None = None
+
+
+class DPPSectionInfo(SQLModel):
+    """Information about an available DPP section"""
+
+    id: str
+    title: str
+    status: str
+    description: str | None = None
+
+
+class CompleteDPP(SQLModel):
+    """Complete DPP document model"""
+
+    id: str
+    generated_at: str
+    format: str
+    sections: dict[str, DPPSection]
+    metadata: dict[str, Any] | None = None
 
 
 # Generic message

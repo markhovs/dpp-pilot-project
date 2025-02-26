@@ -22,6 +22,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { AddIcon } from "@chakra-ui/icons";
 import { type SubmodelTemplate } from "../../types/aas";
+import { getTemplateDescription } from "../../utils/templateHelpers";
 
 import { AasService } from "../../client";
 import useCustomToast from "../../hooks/useCustomToast";
@@ -103,7 +104,7 @@ export default function AttachSubmodel({ aasId }: AttachSubmodelProps) {
                       <VStack align="start" spacing={1} ml={2}>
                         <Text fontWeight="medium">{template.id_short}</Text>
                         <Text fontSize="sm" color="gray.400">
-                          {template.description?.['en'] || Object.values(template.description)[0] || 'No description'}
+                          {getTemplateDescription(template.description)}
                         </Text>
                         <Badge size="sm" colorScheme="blue">
                           {template.category}

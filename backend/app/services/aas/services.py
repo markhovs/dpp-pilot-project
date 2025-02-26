@@ -2,13 +2,17 @@ import json
 from datetime import datetime
 
 from basyx.aas import model
-from basyx.aas.model.datatypes import Date, from_xsd
 from basyx.aas.util.identification import UUIDGenerator
+from basyx.aas.util.traversal import walk_submodel
 from sqlmodel import Session, select
 
-from app.aas.serialization import deserialize_aas_from_json, serialize_aas_to_json
-from app.aas.template_loader import import_aasx_package, list_template_packages
 from app.models import AASAsset, AASSubmodel
+from app.services.aas.serialization import (
+    deserialize_aas_from_json,
+    serialize_aas_to_json,
+)
+from app.services.aas.template_loader import import_aasx_package, list_template_packages
+from app.services.aas.utils import convert_value
 
 # Initialize a UUID generator (could be injected/configured as needed)
 uuid_gen = UUIDGenerator()
@@ -202,96 +206,48 @@ def update_asset_metadata(aas_id: str, new_metadata: dict, session: Session) -> 
     return updated_json
 
 
-def update_submodel_data(
-    aas_id: str, submodel_id: str, new_data: dict, session: Session
-) -> dict:
-    """
-    Update property values on a submodel instance that belongs to a given AAS.
-    """
-    # 1. Retrieve the parent AAS asset.
-    asset_record = session.get(AASAsset, aas_id)
-    if not asset_record:
-        raise ValueError(f"No asset found with id '{aas_id}'.")
-
-    # 2. Deserialize the AAS shell (to confirm membership of submodel).
-    aas_shell = deserialize_aas_from_json(json.dumps(asset_record.data))
-    if not any(ref.key[0].value == submodel_id for ref in aas_shell.submodel):
-        raise ValueError(f"Submodel '{submodel_id}' is not part of AAS '{aas_id}'.")
-
-    # 3. Get the Submodel record and BaSyx object from DB.
+def update_submodel_data(submodel_id: str, new_data: dict, session: Session) -> dict:
+    """Update property values on a submodel instance using BaSyx's native traversal."""
     sub_record = session.get(AASSubmodel, submodel_id)
     if not sub_record:
         raise ValueError(f"No submodel found with id '{submodel_id}'.")
 
     sub_obj = deserialize_aas_from_json(json.dumps(sub_record.data))
-    provider = model.DictObjectStore()
-    provider.add(sub_obj)
 
-    # 4. Recursive helper to find *all* Property or MultiLanguageProperty elements.
-    def find_all_properties(element) -> list[model.SubmodelElement]:
-        results = []
+    # Build a map of id_short -> element for quick lookup
+    element_map = {}
+    for element in walk_submodel(sub_obj):
+        if hasattr(element, "id_short"):
+            path = []
+            current = element
+            while current and hasattr(current, "id_short"):
+                path.insert(0, current.id_short)
+                current = current.parent
+            element_map["/".join(path)] = element
 
-        # If it's a Property or MLP, collect it
-        if isinstance(
-            element, model.Property | model.MultiLanguageProperty | model.File
-        ):
-            results.append(element)
-            return results
+    # Update each element that matches the paths in new_data
+    for path, new_value in new_data.items():
+        if path not in element_map:
+            continue
 
-        children = []
+        element = element_map[path]
 
-        # Check submodel_element
-        if hasattr(element, "submodel_element") and element.submodel_element:
-            children.extend(element.submodel_element)
+        try:
+            if isinstance(element, model.MultiLanguageProperty):
+                if not isinstance(new_value, list):
+                    raise ValueError("Value for MultiLanguageProperty must be an array")
+                element.value = [
+                    {"language": item["language"], "text": str(item["text"])}
+                    for item in new_value
+                ]
+            elif isinstance(element, model.File):
+                element.value = str(new_value)
+            elif isinstance(element, model.Property):
+                element.value = convert_value(new_value, element.value_type)
+        except ValueError as e:
+            raise ValueError(f"Failed to update value at {path}: {e}")
 
-        # Check value
-        if hasattr(element, "value") and element.value is not None:
-            val = element.value
-            if isinstance(val, list):
-                children.extend(val)
-            elif isinstance(val, model.base.NamespaceSet):
-                for child in val:
-                    children.append(child)
-            else:
-                # Debug: unknown type
-                print("DEBUG: 'value' is neither list nor NamespaceSet:", type(val))
-
-        # Recurse
-        for child in children:
-            results.extend(find_all_properties(child))
-
-        return results
-
-    all_props = find_all_properties(sub_obj)
-    if not all_props:
-        raise ValueError(
-            "Submodel does not contain any Property/MultiLanguageProperty elements to update."
-        )
-
-    # 5. Update the matching elements
-    for elem in all_props:
-        if elem.id_short in new_data:
-            new_val = new_data[elem.id_short]
-            if isinstance(elem, model.MultiLanguageProperty):
-                # For multi-language, store a single-language entry
-                elem.value = [{"language": "en", "text": new_val}]
-            else:
-                # For standard Property
-                if getattr(elem, "value_type", None) == Date:
-                    try:
-                        # Ensure the date is in the correct format (YYYY-MM-DD)
-                        formatted_date = datetime.strptime(
-                            new_val, "%m/%d/%Y"
-                        ).strftime("%Y-%m-%d")
-                        elem.value = from_xsd(formatted_date, Date)
-                    except Exception as e:
-                        raise ValueError(f"Could not convert {new_val} to Date: {e}")
-                else:
-                    elem.value = new_val
-
-    # 6. Update references in BaSyx, re-serialize, and persist
     sub_obj.update()
-    provider.add(sub_obj)
 
     updated_json = json.loads(serialize_aas_to_json(sub_obj))
     sub_record.data = updated_json

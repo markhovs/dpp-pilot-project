@@ -2,7 +2,7 @@ import { useParams, useNavigate, createFileRoute } from "@tanstack/react-router"
 import useAasDetails from "../../hooks/useAasDetails";
 import { Container, Heading, Text, Button, VStack, Box } from "@chakra-ui/react";
 import SubmodelItem from "../../components/AAS/SubmodelItem";
-import SubmodelActions from "../../components/AAS/SubmodelActions"; // Add this import
+import SubmodelActions from "../../components/AAS/SubmodelActions";
 import { useQueryClient } from "@tanstack/react-query";
 import type { UserPublic } from "../../client";
 

@@ -35,6 +35,44 @@ export type Body_login_login_access_token = {
   client_secret?: string | null
 }
 
+/**
+ * Complete DPP document model
+ */
+export type CompleteDPP = {
+  metadata?: {
+    [key: string]: unknown
+  } | null
+  id: string
+  generated_at: string
+  format: string
+  sections: {
+    [key: string]: DPPSection
+  }
+}
+
+/**
+ * Content of a DPP section
+ */
+export type DPPSection = {
+  metadata?: {
+    [key: string]: unknown
+  } | null
+  title: string
+  data: {
+    [key: string]: unknown
+  }
+}
+
+/**
+ * Information about an available DPP section
+ */
+export type DPPSectionInfo = {
+  id: string
+  title: string
+  status: string
+  description?: string | null
+}
+
 export type HTTPValidationError = {
   detail?: Array<ValidationError>
 }
@@ -153,7 +191,6 @@ export type AasRemoveSubmodelResponse = {
 }
 
 export type AasUpdateSubmodelDataData = {
-  aasId: string
   requestBody: AASSubmodelDataUpdate
   submodelId: string
 }
@@ -175,6 +212,26 @@ export type AasGetAasData = {
 }
 
 export type AasGetAasResponse = unknown
+
+export type DppListDppSectionsData = {
+  aasId: string
+}
+
+export type DppListDppSectionsResponse = Array<DPPSectionInfo>
+
+export type DppGetDppSectionData = {
+  aasId: string
+  sectionId: string
+}
+
+export type DppGetDppSectionResponse = DPPSection
+
+export type DppDownloadCompleteDppData = {
+  aasId: string
+  format?: string
+}
+
+export type DppDownloadCompleteDppResponse = CompleteDPP
 
 export type LoginLoginAccessTokenData = {
   formData: Body_login_login_access_token

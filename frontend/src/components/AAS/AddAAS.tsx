@@ -23,6 +23,7 @@ import { ChevronDownIcon, ChevronRightIcon } from "@chakra-ui/icons"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { type SubmitHandler, useForm } from "react-hook-form"
 import { type SubmodelTemplate } from "../../types/aas"
+import { getTemplateDescription } from "../../utils/templateHelpers"
 
 import {
   type AASAssetCreateFromTemplatesRequest,
@@ -162,11 +163,7 @@ const AddAAS: React.FC<AddAASProps> = ({ isOpen, onClose }) => {
                           <strong>Template:</strong> {template.template_name}
                         </Text>
                         <Text fontSize="sm">
-                          <strong>Description:</strong> {
-                            template.description?.['en'] ||
-                            Object.values(template.description)[0] ||
-                            'No description'
-                          }
+                          <strong>Description:</strong> {getTemplateDescription(template.description)}
                         </Text>
                       </Box>
                     </Collapse>

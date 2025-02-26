@@ -2,7 +2,6 @@ from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException
 
-from app.aas import services as aas_services
 from app.api.deps import SessionDep, get_current_active_superuser, get_current_user
 from app.models import (
     AASAssetCreateFromTemplatesRequest,
@@ -10,6 +9,7 @@ from app.models import (
     AASAttachSubmodelsRequest,
     AASSubmodelDataUpdate,
 )
+from app.services.aas import services as aas_services
 
 router = APIRouter(prefix="/aas", tags=["AAS"])
 
@@ -158,36 +158,10 @@ async def list_all_aas(session: SessionDep):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.patch(
-    "/{aas_id}/submodels/{submodel_id:path}",
-    summary="Update data on a submodel instance for a given AAS",
-    dependencies=[Depends(get_current_user)],
-    response_model=dict[str, Any],
-)
-async def update_submodel_data(
-    aas_id: str, submodel_id: str, body: AASSubmodelDataUpdate, session: SessionDep
-):
-    """
-    Update data on a specific submodel instance (e.g. property values or dynamic data) for a given AAS.
-    """
-    try:
-        updated_submodel = aas_services.update_submodel_data(
-            aas_id, submodel_id, body.new_data, session
-        )
-        return updated_submodel
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
-
-
-# -------------------------------------------------------------------
-# Public endpoints (accessible to any user)
-# -------------------------------------------------------------------
-
-
 @router.get(
     "/{aas_id:path}",
     summary="Retrieve a specific AAS instance by ID",
-    # response_model=Dict[str, Any],
+    dependencies=[Depends(get_current_user)],
 )
 async def get_aas(aas_id: str, session: SessionDep):
     """
@@ -197,3 +171,24 @@ async def get_aas(aas_id: str, session: SessionDep):
         return aas_services.get_asset_by_id(aas_id, session)
     except ValueError as ve:
         raise HTTPException(status_code=404, detail=str(ve))
+
+
+@router.patch(
+    "/{aas_id}/submodels/{submodel_id:path}",
+    summary="Update data on a submodel instance for a given AAS",
+    dependencies=[Depends(get_current_user)],
+    response_model=dict[str, Any],
+)
+async def update_submodel_data(
+    submodel_id: str, body: AASSubmodelDataUpdate, session: SessionDep
+):
+    """
+    Update data on a specific submodel instance (e.g. property values or dynamic data) for a given AAS.
+    """
+    try:
+        updated_submodel = aas_services.update_submodel_data(
+            submodel_id, body.new_data, session
+        )
+        return updated_submodel
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
