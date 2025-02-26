@@ -59,6 +59,10 @@ export function findElementByPath(root: any, path: string): any {
   return current;
 }
 
+export const buildFullPath = (parentPath: string, idShort: string, index?: number) => {
+  return index !== undefined ? `${parentPath}[${index}]/${idShort}` : `${parentPath}/${idShort}`;
+};
+
 export type XSDValueType =
   | "xs:string"
   | "xs:long"

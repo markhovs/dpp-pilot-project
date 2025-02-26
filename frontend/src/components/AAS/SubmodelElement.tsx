@@ -5,7 +5,7 @@ import {
 } from "@chakra-ui/react";
 import { ChevronDownIcon, ChevronUpIcon, AddIcon, DeleteIcon } from "@chakra-ui/icons";
 import { useDisclosure } from "@chakra-ui/react";
-import { getInputType, validateValue, formatValue } from "../../utils/aas";
+import { getInputType, validateValue, formatValue, buildFullPath } from "../../utils/aas";
 import { useState } from "react";
 
 interface LangString {
@@ -26,6 +26,7 @@ const SubmodelElement = ({
   aasId,
   submodelId,
   parentPath = "",
+  index,
 }: {
   element: any;
   isEditing: boolean;
@@ -34,6 +35,7 @@ const SubmodelElement = ({
   aasId: string;
   submodelId: string;
   parentPath?: string;
+  index?: number;
 }) => {
   const { isOpen, onToggle } = useDisclosure();
   const [validationError, setValidationError] = useState<string | null>(null);
@@ -95,7 +97,7 @@ const SubmodelElement = ({
   const mutedColor = useColorModeValue("gray.600", "gray.400");
 
   // Build the current element's full path
-  const currentPath = parentPath ? `${parentPath}/${element.idShort}` : element.idShort;
+  const currentPath = buildFullPath(parentPath, element.idShort, index);
 
   const handleValueChange = (path: string, newValue: any, valueType?: string) => {
     if (valueType) {
@@ -605,7 +607,7 @@ const SubmodelElement = ({
       {isCollection && (
         <Collapse in={isOpen} animateOpacity>
           <VStack spacing={3} align="stretch" mt={3} pl={4} borderLeft={`2px solid ${borderColor}`}>
-            {getCollectionElements(elemData).map((subElement: any) => (
+            {getCollectionElements(elemData).map((subElement: any, idx: number) => (
               <SubmodelElement
                 key={subElement.idShort || Math.random().toString()}
                 element={subElement}
@@ -615,6 +617,7 @@ const SubmodelElement = ({
                 aasId={aasId}
                 submodelId={submodelId}
                 parentPath={currentPath} // Pass current full path
+                index={idx} // Pass index for nested elements
               />
             ))}
           </VStack>
