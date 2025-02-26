@@ -23,7 +23,7 @@ import { type SubmitHandler, useForm } from "react-hook-form"
 import Logo from "/assets/images/logo.svg"
 import type { Body_login_login_access_token as AccessToken } from "../client"
 import useAuth, { isLoggedIn } from "../hooks/useAuth"
-import { emailPattern } from "../utils"
+import { emailPattern } from "../utils/core"
 
 export const Route = createFileRoute("/login")({
   component: Login,

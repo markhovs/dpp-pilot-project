@@ -17,7 +17,7 @@ import { type SubmitHandler, useForm } from "react-hook-form"
 
 import { type AasUpdateAasMetadataData, type AASAssetMetadataUpdate, AasService, type ApiError } from "../../client"
 import useCustomToast from "../../hooks/useCustomToast"
-import { handleError } from "../../utils"
+import { handleError } from "../../utils/core"
 
 interface EditAASProps {
   aas: { id: string; globalAssetId?: string; displayName?: string; description?: string }

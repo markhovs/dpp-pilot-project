@@ -14,7 +14,7 @@ import { type SubmitHandler, useForm } from "react-hook-form"
 import { type ApiError, LoginService } from "../client"
 import { isLoggedIn } from "../hooks/useAuth"
 import useCustomToast from "../hooks/useCustomToast"
-import { emailPattern, handleError } from "../utils"
+import { emailPattern, handleError } from "../utils/core"
 
 interface FormData {
   email: string

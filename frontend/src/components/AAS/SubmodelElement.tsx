@@ -5,7 +5,7 @@ import {
 } from "@chakra-ui/react";
 import { ChevronDownIcon, ChevronUpIcon, AddIcon, DeleteIcon } from "@chakra-ui/icons";
 import { useDisclosure } from "@chakra-ui/react";
-import { getInputType, validateValue, formatValue } from "../../utils/valueTypeUtils";
+import { getInputType, validateValue, formatValue } from "../../utils/aas";
 import { useState } from "react";
 
 interface LangString {

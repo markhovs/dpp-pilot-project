@@ -1,3 +1,64 @@
+type LangStringSet = { [key: string]: string } | null | undefined;
+
+export const getTemplateDescription = (description: LangStringSet): string => {
+  try {
+    if (!description) return 'No description';
+    if (typeof description !== 'object') return 'Invalid description';
+
+    // Try to get English description first
+    if ('en' in description && description['en']) return description['en'];
+
+    // If no English description, get the first available description
+    const values = Object.values(description).filter(value =>
+      typeof value === 'string' && value.length > 0
+    );
+    return values.length > 0 ? values[0] : 'No description';
+  } catch (error) {
+    console.error('Error processing template description:', error);
+    return 'No description';
+  }
+};
+
+/**
+ * Find an element in the AAS submodel tree by its full path.
+ * Handles arbitrary nesting levels through collections and submodelElements.
+ */
+export function findElementByPath(root: any, path: string): any {
+  const segments = path.split('/');
+  let current = root;
+
+  // For each path segment, traverse down the tree
+  for (let i = 0; i < segments.length; i++) {
+    const segment = segments[i];
+    let found = false;
+
+    // Look in different possible locations for children
+    const searchLocations = [
+      // Direct values array (for collections)
+      ...(Array.isArray(current.value) ? current.value : []),
+      // Submodel elements
+      ...(Array.isArray(current.submodelElements) ? current.submodelElements : []),
+      // Statements (for entities)
+      ...(Array.isArray(current.statements) ? current.statements : [])
+    ];
+
+    // Search through all possible locations
+    for (const potentialChild of searchLocations) {
+      if (potentialChild.idShort === segment) {
+        current = potentialChild;
+        found = true;
+        break;
+      }
+    }
+
+    if (!found) {
+      return null;
+    }
+  }
+
+  return current;
+}
+
 export type XSDValueType =
   | "xs:string"
   | "xs:long"

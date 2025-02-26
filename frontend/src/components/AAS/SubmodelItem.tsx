@@ -21,8 +21,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import SubmodelElement from "./SubmodelElement";
 import { AasService } from "../../client";
 import useCustomToast from "../../hooks/useCustomToast";
-import { validateValue } from "../../utils/valueTypeUtils";
-import { findElementByPath } from '../../utils/aasUtils';
+import { validateValue, findElementByPath } from "../../utils/aas";
 
 interface SubmodelItemProps {
   submodel: any;

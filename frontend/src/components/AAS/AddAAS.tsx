@@ -23,7 +23,7 @@ import { ChevronDownIcon, ChevronRightIcon } from "@chakra-ui/icons"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { type SubmitHandler, useForm } from "react-hook-form"
 import { type SubmodelTemplate } from "../../types/aas"
-import { getTemplateDescription } from "../../utils/templateHelpers"
+import { getTemplateDescription } from "../../utils/aas"
 
 import {
   type AASAssetCreateFromTemplatesRequest,
@@ -31,7 +31,7 @@ import {
   type ApiError,
 } from "../../client"
 import useCustomToast from "../../hooks/useCustomToast"
-import { handleError } from "../../utils"
+import { handleError } from "../../utils/core"
 
 interface AddAASProps {
   isOpen: boolean

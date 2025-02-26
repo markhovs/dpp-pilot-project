@@ -22,7 +22,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { AddIcon } from "@chakra-ui/icons";
 import { type SubmodelTemplate } from "../../types/aas";
-import { getTemplateDescription } from "../../utils/templateHelpers";
+import { getTemplateDescription } from "../../utils/aas";
 
 import { AasService } from "../../client";
 import useCustomToast from "../../hooks/useCustomToast";
