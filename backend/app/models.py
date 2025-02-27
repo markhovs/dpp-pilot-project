@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime
 from typing import Any
 
-from pydantic import EmailStr
+from pydantic import BaseModel, EmailStr
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlmodel import Column, Field, SQLModel
 
@@ -160,27 +160,21 @@ class AASSubmodelsPublic(SQLModel):
     count: int
 
 
-# DPP Models
-class DPPSection(SQLModel):
-    """Content of a DPP section"""
-
+# DPP Models - changed to inherit from BaseModel instead of SQLModel
+class DPPSection(BaseModel):
     title: str
     data: dict[str, Any]
     metadata: dict[str, Any] | None = None
 
 
-class DPPSectionInfo(SQLModel):
-    """Information about an available DPP section"""
-
+class DPPSectionInfo(BaseModel):
     id: str
     title: str
     status: str
     description: str | None = None
 
 
-class CompleteDPP(SQLModel):
-    """Complete DPP document model"""
-
+class CompleteDPP(BaseModel):
     id: str
     generated_at: str
     format: str

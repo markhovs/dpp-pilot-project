@@ -35,37 +35,28 @@ export type Body_login_login_access_token = {
   client_secret?: string | null
 }
 
-/**
- * Complete DPP document model
- */
 export type CompleteDPP = {
-  metadata?: {
-    [key: string]: unknown
-  } | null
   id: string
   generated_at: string
   format: string
   sections: {
     [key: string]: DPPSection
   }
-}
-
-/**
- * Content of a DPP section
- */
-export type DPPSection = {
   metadata?: {
     [key: string]: unknown
   } | null
+}
+
+export type DPPSection = {
   title: string
   data: {
     [key: string]: unknown
   }
+  metadata?: {
+    [key: string]: unknown
+  } | null
 }
 
-/**
- * Information about an available DPP section
- */
 export type DPPSectionInfo = {
   id: string
   title: string
@@ -215,21 +206,40 @@ export type AasGetAasData = {
 export type AasGetAasResponse = unknown
 
 export type DppListDppSectionsData = {
+  /**
+   * ID of the AAS to generate DPP for
+   */
   aasId: string
+  /**
+   * Filter sections by status (available, incomplete)
+   */
+  statusFilter?: string | null
 }
 
 export type DppListDppSectionsResponse = Array<DPPSectionInfo>
 
 export type DppGetDppSectionData = {
+  /**
+   * ID of the AAS
+   */
   aasId: string
+  /**
+   * ID of the section to retrieve
+   */
   sectionId: string
 }
 
 export type DppGetDppSectionResponse = DPPSection
 
 export type DppDownloadCompleteDppData = {
+  /**
+   * ID of the AAS to generate DPP for
+   */
   aasId: string
-  format?: string
+  /**
+   * Whether to include raw data in the output
+   */
+  includeRaw?: boolean
 }
 
 export type DppDownloadCompleteDppResponse = CompleteDPP

@@ -6,6 +6,7 @@ from app.models import CompleteDPP, DPPSection, DPPSectionInfo
 from app.services.aas import services as aas_services
 
 from .sections import SECTION_PROCESSORS, get_available_sections
+from .utils import clean_nulls
 
 
 async def get_dpp_sections(aas_id: str, session: Session) -> list[DPPSectionInfo]:
@@ -32,6 +33,8 @@ async def get_dpp_section(aas_id: str, section_id: str, session: Session) -> DPP
         if not section:
             raise ValueError(f"Required data for section '{section_id}' not available")
 
+        # Clean null values from the section data
+        section.data = clean_nulls(section.data)
         return section
     except Exception as e:
         raise ValueError(f"Error retrieving DPP section: {str(e)}")
@@ -40,7 +43,17 @@ async def get_dpp_section(aas_id: str, section_id: str, session: Session) -> DPP
 async def generate_complete_dpp(
     aas_id: str, format: str, session: Session
 ) -> CompleteDPP:
-    """Generate complete DPP in requested format."""
+    """
+    Generate complete DPP in requested format.
+
+    Args:
+        aas_id: ID of the AAS to generate DPP for
+        format: Format options: 'raw' (include all raw data) or 'clean' (remove nulls)
+        session: Database session
+
+    Returns:
+        Complete DPP document
+    """
     try:
         aas_data = aas_services.get_asset_by_id(aas_id, session)
         sections = {}
@@ -50,6 +63,9 @@ async def generate_complete_dpp(
             processor = processor_class(aas_data)
             section = processor.process()
             if section:
+                # Clean null values if not requesting raw data
+                if format != "raw":
+                    section.data = clean_nulls(section.data)
                 sections[section_id] = section
 
         # Generate metadata for the DPP

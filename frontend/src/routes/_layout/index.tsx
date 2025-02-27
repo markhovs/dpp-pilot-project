@@ -13,10 +13,11 @@ import {
   IconButton,
   VStack,
   Box,
+  HStack,
 } from "@chakra-ui/react"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { createFileRoute, Link } from "@tanstack/react-router"
-import { FiEye } from "react-icons/fi";
+import { FiEye, FiFileText } from "react-icons/fi";
 
 import { AasService, type UserPublic } from "../../client"
 import ActionsMenu from "../../components/Common/ActionsMenu"
@@ -113,18 +114,30 @@ function AasTable() {
       <Td isTruncated maxWidth="200px">{aas.displayName}</Td>
       <Td>{aas.submodelCount}</Td>
       <Td>
-        {currentUser?.is_superuser ? (
-          <ActionsMenu type="AAS" value={aas} />
-        ) : (
+        <HStack spacing={2}>
+          {currentUser?.is_superuser ? (
+            <ActionsMenu type="AAS" value={aas} />
+          ) : (
+            <IconButton
+              as={Link}
+              to={`/aas/${aas.id}`}
+              icon={<FiEye />}
+              aria-label="View Instance"
+              variant="ghost"
+              size="sm"
+            />
+          )}
           <IconButton
             as={Link}
-            to={`/aas/${aas.id}`}
-            icon={<FiEye />}
-            aria-label="View Instance"
+            to={`/dpp/${aas.id}`}
+            icon={<FiFileText />}
+            aria-label="View DPP"
             variant="ghost"
             size="sm"
+            colorScheme="blue"
+            title="View Digital Product Passport"
           />
-        )}
+        </HStack>
       </Td>
     </Tr>
   ))}

@@ -275,13 +275,15 @@ export class DppService {
    *
    * Args:
    * aas_id: ID of the AAS to generate DPP for
+   * status_filter: Optional filter for section status
    * session: Database session dependency
    *
    * Returns:
    * List of available DPP sections with their status
    * @param data The data for the request.
-   * @param data.aasId
-   * @returns DPPSectionInfo Successful Response
+   * @param data.aasId ID of the AAS to generate DPP for
+   * @param data.statusFilter Filter sections by status (available, incomplete)
+   * @returns DPPSectionInfo List of available DPP sections with their status
    * @throws ApiError
    */
   public static listDppSections(
@@ -292,6 +294,9 @@ export class DppService {
       url: "/api/v1/dpp/{aas_id}/sections",
       path: {
         aas_id: data.aasId,
+      },
+      query: {
+        status_filter: data.statusFilter,
       },
       errors: {
         422: "Validation Error",
@@ -311,9 +316,9 @@ export class DppService {
    * Returns:
    * Detailed content of the requested DPP section
    * @param data The data for the request.
-   * @param data.aasId
-   * @param data.sectionId
-   * @returns DPPSection Successful Response
+   * @param data.aasId ID of the AAS
+   * @param data.sectionId ID of the section to retrieve
+   * @returns DPPSection Detailed content of the requested DPP section
    * @throws ApiError
    */
   public static getDppSection(
@@ -333,20 +338,20 @@ export class DppService {
   }
 
   /**
-   * Download complete DPP
-   * Download complete DPP in requested format.
+   * Download complete DPP in JSON format
+   * Download complete DPP in JSON format.
    *
    * Args:
    * aas_id: ID of the AAS to generate DPP for
-   * format: Output format (default: json)
+   * include_raw: Whether to include raw data in the output
    * session: Database session dependency
    *
    * Returns:
    * Complete DPP document with all available sections
    * @param data The data for the request.
-   * @param data.aasId
-   * @param data.format
-   * @returns CompleteDPP Successful Response
+   * @param data.aasId ID of the AAS to generate DPP for
+   * @param data.includeRaw Whether to include raw data in the output
+   * @returns CompleteDPP Complete DPP document with all available sections
    * @throws ApiError
    */
   public static downloadCompleteDpp(
@@ -359,7 +364,7 @@ export class DppService {
         aas_id: data.aasId,
       },
       query: {
-        format: data.format,
+        include_raw: data.includeRaw,
       },
       errors: {
         422: "Validation Error",
