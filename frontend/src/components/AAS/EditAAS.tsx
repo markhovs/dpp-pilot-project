@@ -1,4 +1,4 @@
-import React from "react"
+import React, { useEffect } from "react"
 import {
   Button,
   FormControl,
@@ -11,6 +11,7 @@ import {
   ModalFooter,
   ModalHeader,
   ModalOverlay,
+  Textarea,
 } from "@chakra-ui/react"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { type SubmitHandler, useForm } from "react-hook-form"
@@ -32,6 +33,7 @@ const EditAAS: React.FC<EditAASProps> = ({ aas, isOpen, onClose }) => {
   const {
     register,
     handleSubmit,
+    reset,
     formState: { isSubmitting },
   } = useForm<AASAssetMetadataUpdate>({
     mode: "onBlur",
@@ -42,13 +44,26 @@ const EditAAS: React.FC<EditAASProps> = ({ aas, isOpen, onClose }) => {
     },
   })
 
+  // Reset form when the modal opens with new AAS data
+  useEffect(() => {
+    if (isOpen) {
+      reset({
+        global_asset_id: aas.globalAssetId || "",
+        display_name: aas.displayName || "",
+        description: aas.description || "",
+      });
+    }
+  }, [isOpen, aas, reset]);
+
   const mutation = useMutation({
     mutationFn: ({ aasId, requestBody }: AasUpdateAasMetadataData) =>
       AasService.updateAasMetadata({ aasId, requestBody }),
     onSuccess: () => {
       showToast("Success!", "AAS updated successfully.", "success")
       onClose()
-      queryClient.invalidateQueries({ queryKey: ["aas"] }) // Refresh AAS list
+      // Invalidate both the AAS list and the specific AAS details
+      queryClient.invalidateQueries({ queryKey: ["aas"] })
+      queryClient.invalidateQueries({ queryKey: ["aasDetails", aas.id] })
     },
     onError: (err: unknown) => {
       if ((err as ApiError).status) {
@@ -61,10 +76,13 @@ const EditAAS: React.FC<EditAASProps> = ({ aas, isOpen, onClose }) => {
   })
 
   const onSubmit: SubmitHandler<AASAssetMetadataUpdate> = (data) => {
-    // Filter out empty fields so that they are **not sent** if left empty
+    // Only send non-empty fields
     const filteredData: AASAssetMetadataUpdate = Object.fromEntries(
       Object.entries(data).filter(([_, value]) => value !== "")
     )
+
+    // Debug
+    console.log("Submitting AAS update:", filteredData);
 
     mutation.mutate({ aasId: aas.id, requestBody: filteredData })
   }
@@ -88,7 +106,13 @@ const EditAAS: React.FC<EditAASProps> = ({ aas, isOpen, onClose }) => {
 
           <FormControl mt={4}>
             <FormLabel htmlFor="description">Description</FormLabel>
-            <Input id="description" {...register("description")} />
+            <Textarea
+              id="description"
+              {...register("description")}
+              placeholder="Enter AAS description"
+              resize="vertical"
+              rows={3}
+            />
           </FormControl>
         </ModalBody>
 

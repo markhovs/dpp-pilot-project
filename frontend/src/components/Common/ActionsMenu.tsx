@@ -8,7 +8,7 @@ import {
 } from "@chakra-ui/react"
 import { Link } from "@tanstack/react-router"
 import { BsThreeDotsVertical } from "react-icons/bs"
-import { FiEdit, FiTrash, FiEye } from "react-icons/fi"
+import { FiEdit, FiTrash, FiEye, FiFileText } from "react-icons/fi"
 
 import EditUser from "../Admin/EditUser"
 import EditAAS from "../AAS/EditAAS"
@@ -50,6 +50,17 @@ const ActionsMenu = <T extends { id: string }>({ type, value, disabled }: Action
               icon={<FiEye fontSize="16px" />}
             >
               View Instance
+            </MenuItem>
+          )}
+          {type === "AAS" && (
+            <MenuItem
+              as={Link}
+              to={`/dpp/${value.id}`}
+              icon={<FiFileText fontSize="16px" />}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              View DPP
             </MenuItem>
           )}
           {EditComponent && (

@@ -67,6 +67,9 @@ async def list_dpp_sections(
 async def get_dpp_section(
     aas_id: str = Path(..., description="ID of the AAS"),
     section_id: str = Path(..., description="ID of the section to retrieve"),
+    include_raw: bool = Query(
+        False, description="Whether to include raw data in the response"
+    ),
     session: SessionDep = None,
 ) -> DPPSection:
     """
@@ -75,13 +78,16 @@ async def get_dpp_section(
     Args:
         aas_id: ID of the AAS
         section_id: ID of the section to retrieve
+        include_raw: Whether to include raw data in the response
         session: Database session dependency
 
     Returns:
         Detailed content of the requested DPP section
     """
     try:
-        section = await dpp_services.get_dpp_section(aas_id, section_id, session)
+        section = await dpp_services.get_dpp_section(
+            aas_id, section_id, include_raw, session
+        )
         return section
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))

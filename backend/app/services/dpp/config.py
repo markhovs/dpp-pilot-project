@@ -1,123 +1,108 @@
 """Configuration for DPP section mapping and processing."""
 
+from enum import Enum
 
-# Template IDs for DPP-relevant submodels
-class SubmodelIdentifiers:
-    """Template IDs for DPP-relevant submodels."""
-
-    NAMEPLATE = "https://admin-shell.io/idta/SubmodelTemplate/DigitalNameplate/3/0"
-    TECHNICAL_DATA = "https://admin-shell.io/ZVEI/TechnicalData/Submodel/1/2"
-    CARBON_FOOTPRINT = (
-        "https://admin-shell.io/idta/SubmodelTemplate/CarbonFootprint/0/9"
-    )
-    CONTACT = "https://admin-shell.io/idta/SubmodelTemplate/ContactInformation/1/0"
-    DOCUMENTATION = (
-        "https://admin-shell.io/idta/SubmodelTemplate/HandoverDocumentation/1/0"
-    )
-    HIERARCHY = (
-        "https://admin-shell.io/idta/SubmodelTemplate/HierarchicalStructuresBoM/1/1"
-    )
-    ASSET_LOCATION = (
-        "https://admin-shell.io/idta/SubmodelTemplate/DataModelforAssetLocation/1/0"
-    )
-    TIME_SERIES = "https://admin-shell.io/idta/SubmodelTemplate/TimeSeries/1/1"
-
-
-# Status constants for section availability
+# Status constants for DPP sections
 STATUS_AVAILABLE = "available"
 STATUS_INCOMPLETE = "incomplete"
 STATUS_UNAVAILABLE = "unavailable"
 
-# Mapping of section IDs to required and optional submodels
+
+class SubmodelIdentifiers:
+    """Template IDs for standard AAS submodels used in the DPP."""
+
+    NAMEPLATE = "https://admin-shell.io/idta/SubmodelTemplate/DigitalNameplate/3/0"
+    DOCUMENTATION = (
+        "https://admin-shell.io/idta/SubmodelTemplate/HandoverDocumentation/1/0"
+    )
+    TECHNICAL_DATA = "https://admin-shell.io/ZVEI/TechnicalData/Submodel/1/2"
+    CONTACT_INFORMATION = (
+        "https://admin-shell.io/idta/SubmodelTemplate/ContactInformation/1/0"
+    )
+    HIERARCHICAL_STRUCTURE = (
+        "https://admin-shell.io/idta/SubmodelTemplate/HierarchicalStructuresBoM/1/1"
+    )
+    CARBON_FOOTPRINT = (
+        "https://admin-shell.io/idta/SubmodelTemplate/CarbonFootprint/0/9"
+    )
+    TIME_SERIES = "https://admin-shell.io/idta/SubmodelTemplate/TimeSeries/1/1"
+    ASSET_LOCATION = (
+        "https://admin-shell.io/idta/SubmodelTemplate/DataModelforAssetLocation/1/0"
+    )
+
+
+# Section requirements - match keys with SECTION_PROCESSORS in sections.py
 SECTION_REQUIREMENTS = {
     "identification": {
+        "title": "Product Identification",
+        "icon": "product",
+        "description": "Basic product details and identification information",
         "required": [SubmodelIdentifiers.NAMEPLATE],
         "optional": [],
-        "title": "Product Identification",
-        "icon": "identification-badge",
-        "description": "Basic product and manufacturer identification information",
     },
-    "technical": {
+    "business": {  # This key MUST match the key in SECTION_PROCESSORS
+        "title": "Business Information",
+        "icon": "business",
+        "description": "Company and contact information",
+        "required": [SubmodelIdentifiers.CONTACT_INFORMATION],
+        "optional": [],
+    },
+    "technical": {  # This key MUST match the key in SECTION_PROCESSORS
+        "title": "Technical Data",
+        "icon": "technical",
+        "description": "Technical specifications and properties",
         "required": [SubmodelIdentifiers.TECHNICAL_DATA],
         "optional": [],
-        "title": "Technical Data",
-        "icon": "gear",
-        "description": "Technical specifications and parameters",
-    },
-    "sustainability": {
-        "required": [SubmodelIdentifiers.CARBON_FOOTPRINT],
-        "optional": [],
-        "title": "Environmental Impact",
-        "icon": "leaf",
-        "description": "Carbon footprint and environmental impact data",
-    },
-    "business": {
-        "required": [SubmodelIdentifiers.CONTACT],
-        "optional": [],
-        "title": "Business Information",
-        "icon": "building",
-        "description": "Contact information and business details",
     },
     "materials": {
-        "required": [SubmodelIdentifiers.HIERARCHY],
-        "optional": [],
         "title": "Materials & Composition",
-        "icon": "cube",
+        "icon": "materials",
         "description": "Product composition and material information",
+        "required": [SubmodelIdentifiers.HIERARCHICAL_STRUCTURE],
+        "optional": [],
+    },
+    "sustainability": {
+        "title": "Environmental Impact",
+        "icon": "sustainability",
+        "description": "Carbon footprint and environmental information",
+        "required": [SubmodelIdentifiers.CARBON_FOOTPRINT],
+        "optional": [],
     },
     "documentation": {
+        "title": "Documentation",
+        "icon": "documentation",
+        "description": "Product manuals and technical documentation",
         "required": [SubmodelIdentifiers.DOCUMENTATION],
         "optional": [],
-        "title": "Documentation",
-        "icon": "file-text",
-        "description": "Technical documentation and manuals",
-    },
-    "compliance": {
-        "required": [SubmodelIdentifiers.NAMEPLATE],
-        "optional": [],
-        "title": "Compliance & Standards",
-        "icon": "check-circle",
-        "description": "Regulatory compliance and certification information",
     },
     "location": {
+        "title": "Asset Location",
+        "icon": "location",
+        "description": "Asset tracking and location information",
         "required": [SubmodelIdentifiers.ASSET_LOCATION],
         "optional": [],
-        "title": "Asset Location",
-        "icon": "map-pin",
-        "description": "Location tracking and history information",
     },
     "usage": {
+        "title": "Usage Data",
+        "icon": "usage",
+        "description": "Time series data and usage statistics",
         "required": [SubmodelIdentifiers.TIME_SERIES],
         "optional": [],
-        "title": "Usage Data",
-        "icon": "activity",
-        "description": "Product usage statistics and history",
+    },
+    "compliance": {
+        "title": "Compliance & Standards",
+        "icon": "compliance",
+        "description": "Regulatory compliance and certifications",
+        "required": [],
+        "optional": [SubmodelIdentifiers.NAMEPLATE],
     },
 }
 
-# EU DPP section priority order (used for display)
-EU_DPP_SECTION_ORDER = [
-    "identification",
-    "compliance",
-    "technical",
-    "materials",
-    "sustainability",
-    "business",
-    "documentation",
-    "location",
-    "usage",
-]
 
-# Core sections required for minimal viable DPP
-CORE_DPP_SECTIONS = ["identification", "technical", "compliance", "sustainability"]
+# Interface format specifications
+class DPPFormat(str, Enum):
+    """Format options for DPP data export."""
 
-# Map of EU DPP requirements to our section IDs
-EU_REQUIREMENT_MAPPING = {
-    "product_identification": "identification",
-    "technical_specifications": "technical",
-    "environmental_footprint": "sustainability",
-    "material_composition": "materials",
-    "compliance_information": "compliance",
-    "usage_instructions": "documentation",
-    "contact_details": "business",
-}
+    JSON = "json"
+    HTML = "html"
+    PDF = "pdf"

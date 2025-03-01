@@ -311,6 +311,7 @@ export class DppService {
    * Args:
    * aas_id: ID of the AAS
    * section_id: ID of the section to retrieve
+   * include_raw: Whether to include raw data in the response
    * session: Database session dependency
    *
    * Returns:
@@ -318,6 +319,7 @@ export class DppService {
    * @param data The data for the request.
    * @param data.aasId ID of the AAS
    * @param data.sectionId ID of the section to retrieve
+   * @param data.includeRaw Whether to include raw data in the response
    * @returns DPPSection Detailed content of the requested DPP section
    * @throws ApiError
    */
@@ -330,6 +332,9 @@ export class DppService {
       path: {
         aas_id: data.aasId,
         section_id: data.sectionId,
+      },
+      query: {
+        include_raw: data.includeRaw,
       },
       errors: {
         422: "Validation Error",

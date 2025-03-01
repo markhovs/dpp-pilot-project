@@ -84,7 +84,7 @@ function AasTable() {
             <Th>Global Asset ID</Th>
             <Th>Display Name</Th>
             <Th>Submodels</Th>
-            <Th>{currentUser?.is_superuser ? 'Actions' : 'View'}</Th>
+            <Th>Actions</Th>
           </Tr>
         </Thead>
         {isPending ? (
@@ -98,50 +98,31 @@ function AasTable() {
             </Tr>
           </Tbody>
         ) : (
-<Tbody>
-  {aasList?.map((aas) => (
-    <Tr key={aas.id} _hover={{ bg: "transparent" }} _focus={{ outline: "none" }}>
-      <Td isTruncated maxWidth="300px">
-        <Text
-          as={Link}
-          to={`/aas/${aas.id}`}
-          _hover={{ textDecoration: "underline", color: "blue.500" }}
-        >
-          {aas.id}
-        </Text>
-      </Td>
-      <Td isTruncated maxWidth="200px">{aas.globalAssetId}</Td>
-      <Td isTruncated maxWidth="200px">{aas.displayName}</Td>
-      <Td>{aas.submodelCount}</Td>
-      <Td>
-        <HStack spacing={2}>
-          {currentUser?.is_superuser ? (
-            <ActionsMenu type="AAS" value={aas} />
-          ) : (
-            <IconButton
-              as={Link}
-              to={`/aas/${aas.id}`}
-              icon={<FiEye />}
-              aria-label="View Instance"
-              variant="ghost"
-              size="sm"
-            />
-          )}
-          <IconButton
-            as={Link}
-            to={`/dpp/${aas.id}`}
-            icon={<FiFileText />}
-            aria-label="View DPP"
-            variant="ghost"
-            size="sm"
-            colorScheme="blue"
-            title="View Digital Product Passport"
-          />
-        </HStack>
-      </Td>
-    </Tr>
-  ))}
-</Tbody>
+          <Tbody>
+            {aasList?.map((aas) => (
+              <Tr key={aas.id} _hover={{ bg: "transparent" }} _focus={{ outline: "none" }}>
+                <Td isTruncated maxWidth="300px">
+                  <Text
+                    as={Link}
+                    to={`/aas/${aas.id}`}
+                    _hover={{ textDecoration: "underline", color: "blue.500" }}
+                  >
+                    {aas.id}
+                  </Text>
+                </Td>
+                <Td isTruncated maxWidth="200px">{aas.globalAssetId}</Td>
+                <Td isTruncated maxWidth="200px">{aas.displayName}</Td>
+                <Td>{aas.submodelCount}</Td>
+                <Td>
+                  {currentUser?.is_superuser ? (
+                    <ActionsMenu type="AAS" value={aas} />
+                  ) : (
+                    <ActionsMenu type="AAS" value={aas} />
+                  )}
+                </Td>
+              </Tr>
+            ))}
+          </Tbody>
         )}
       </Table>
     </TableContainer>

@@ -18,8 +18,21 @@ async def get_dpp_sections(aas_id: str, session: Session) -> list[DPPSectionInfo
         raise ValueError(f"Error retrieving DPP sections: {str(e)}")
 
 
-async def get_dpp_section(aas_id: str, section_id: str, session: Session) -> DPPSection:
-    """Get detailed content for a specific DPP section."""
+async def get_dpp_section(
+    aas_id: str, section_id: str, include_raw: bool = False, session: Session = None
+) -> DPPSection:
+    """
+    Get detailed content for a specific DPP section.
+
+    Args:
+        aas_id: ID of the AAS
+        section_id: ID of the section to retrieve
+        include_raw: Whether to preserve null values in the response
+        session: Database session
+
+    Returns:
+        Processed DPP section with the requested data
+    """
     try:
         aas_data = aas_services.get_asset_by_id(aas_id, session)
 
@@ -28,13 +41,17 @@ async def get_dpp_section(aas_id: str, section_id: str, session: Session) -> DPP
             raise ValueError(f"Section '{section_id}' not recognized")
 
         processor = processor_class(aas_data)
+        # Don't pass include_raw to process method - section processors shouldn't
+        # be concerned with null handling, that's a service layer concern
         section = processor.process()
 
         if not section:
             raise ValueError(f"Required data for section '{section_id}' not available")
 
-        # Clean null values from the section data
-        section.data = clean_nulls(section.data)
+        # Clean null values from the section data only if include_raw is False
+        if not include_raw:
+            section.data = clean_nulls(section.data)
+
         return section
     except Exception as e:
         raise ValueError(f"Error retrieving DPP section: {str(e)}")

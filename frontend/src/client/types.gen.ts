@@ -224,6 +224,10 @@ export type DppGetDppSectionData = {
    */
   aasId: string
   /**
+   * Whether to include raw data in the response
+   */
+  includeRaw?: boolean
+  /**
    * ID of the section to retrieve
    */
   sectionId: string

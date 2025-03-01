@@ -527,10 +527,18 @@ class BaseDPPSection:
             "elements": elements,
         }
 
+    def process(self) -> DPPSection | None:
+        """
+        Process the section.
+        Override in subclasses to implement specific section processing.
+
+        Returns:
+            Processed DPP section or None if data is not available
+        """
+        return None
+
 
 class IdentificationSection(BaseDPPSection):
-    """Product identification information"""
-
     def process(self) -> DPPSection | None:
         nameplate = self.get_submodel(SubmodelIdentifiers.NAMEPLATE)
         if not nameplate:
@@ -543,6 +551,35 @@ class IdentificationSection(BaseDPPSection):
         product_name = elements.get("ManufacturerProductDesignation", {}).get("value")
         manufacturer_name = elements.get("ManufacturerName", {}).get("value")
         product_family = elements.get("ManufacturerProductFamily", {}).get("value")
+
+        # Filter out elements that we've already extracted into specific fields
+        extracted_keys = [
+            "ManufacturerProductDesignation",
+            "ManufacturerName",
+            "ManufacturerProductFamily",
+            "ManufacturerProductType",
+            "SerialNumber",
+            "ProductArticleNumberOfManufacturer",
+            "YearOfConstruction",
+            "CountryOfOrigin",
+            "DateOfManufacture",
+            "CompanyLogo",
+            "OrderCodeOfManufacturer",
+            "URIOfTheProduct",
+            "HardwareVersion",
+            "SoftwareVersion",
+            "FirmwareVersion",
+        ]
+
+        additional_data = {
+            "metadata": processed_nameplate.get("metadata", {}),
+            "elements": {},
+        }
+
+        # Only include elements we haven't explicitly handled
+        for key, value in elements.items():
+            if key not in extracted_keys:
+                additional_data["elements"][key] = value
 
         data = {
             "product": {
@@ -571,6 +608,7 @@ class IdentificationSection(BaseDPPSection):
                 "software": elements.get("SoftwareVersion", {}).get("value"),
                 "firmware": elements.get("FirmwareVersion", {}).get("value"),
             },
+            "additionalData": additional_data,
         }
 
         return DPPSection(title="Product Identification", data=data)
@@ -580,7 +618,7 @@ class BusinessInfoSection(BaseDPPSection):
     """Business and contact information"""
 
     def process(self) -> DPPSection | None:
-        contact = self.get_submodel(SubmodelIdentifiers.CONTACT)
+        contact = self.get_submodel(SubmodelIdentifiers.CONTACT_INFORMATION)
         if not contact:
             return None
 
@@ -605,6 +643,53 @@ class BusinessInfoSection(BaseDPPSection):
         if phone_element and "TelephoneNumber" in phone_element:
             phone = phone_element.get("TelephoneNumber", {}).get("value")
 
+        # Create filtered additionalData that only includes unhandled properties
+        extracted_elements = [
+            "RoleOfContactPerson",
+            "Company",
+            "Department",
+            "FirstName",
+            "Title",
+            "AcademicTitle",
+            "Street",
+            "CityTown",
+            "Zipcode",
+            "NationalCode",
+            "StateCounty",
+            "Email",
+            "Phone",
+            "Language",
+            "TimeZone",
+        ]
+
+        additional_data = {"metadata": processed_contact.get("metadata", {})}
+
+        # Create a structure that only includes elements not explicitly extracted
+        filtered_elements = {}
+        for key, value in processed_contact.get("elements", {}).items():
+            if (
+                key != "ContactInformation"
+            ):  # Keep anything that isn't the main ContactInformation
+                filtered_elements[key] = value
+
+        # For ContactInformation, filter out the elements we've already extracted
+        if "ContactInformation" in processed_contact.get("elements", {}):
+            contact_info_copy = processed_contact["elements"][
+                "ContactInformation"
+            ].copy()
+            filtered_ci_elements = {}
+
+            for key, value in elements.items():
+                if key not in extracted_elements:
+                    filtered_ci_elements[key] = value
+
+            if filtered_ci_elements:
+                contact_info_copy["elements"] = filtered_ci_elements
+                filtered_elements["ContactInformation"] = contact_info_copy
+
+        if filtered_elements:
+            additional_data["elements"] = filtered_elements
+
         data = {
             "contacts": [
                 {
@@ -628,7 +713,8 @@ class BusinessInfoSection(BaseDPPSection):
                         "timeZone": elements.get("TimeZone", {}).get("value"),
                     },
                 }
-            ]
+            ],
+            "additionalData": additional_data,
         }
 
         return DPPSection(title="Business Information", data=data)
@@ -672,6 +758,25 @@ class TechnicalDataSection(BaseDPPSection):
             "orderCode": general_info.get("ManufacturerOrderCode", {}).get("value"),
         }
 
+        # Create filtered additionalData with only properties not covered in the structured data
+        extracted_keys = [
+            "GeneralInformation",
+            "ProductClassifications",
+            "TechnicalProperties",
+            "FurtherInformation",
+        ]
+
+        additional_data = {"metadata": processed_data.get("metadata", {})}
+
+        # Only include elements we haven't explicitly handled
+        filtered_elements = {}
+        for key, value in elements.items():
+            if key not in extracted_keys:
+                filtered_elements[key] = value
+
+        if filtered_elements:
+            additional_data["elements"] = filtered_elements
+
         # Return both the structured summary and complete data
         return DPPSection(
             title="Technical Data",
@@ -681,7 +786,7 @@ class TechnicalDataSection(BaseDPPSection):
                 "classifications": classifications.get("ProductClassificationItem", {}),
                 "technicalProperties": tech_props,
                 "furtherInformation": further_info,
-                "rawData": processed_data,
+                "additionalData": additional_data,
             },
         )
 
@@ -701,6 +806,20 @@ class SustainabilitySection(BaseDPPSection):
 
         if not pcf and not tcf:
             return None
+
+        # Create filtered additionalData with only properties not covered in the structured data
+        extracted_keys = ["ProductCarbonFootprint", "TransportCarbonFootprint"]
+
+        additional_data = {"metadata": processed_carbon.get("metadata", {})}
+
+        # Only include elements we haven't explicitly handled
+        filtered_elements = {}
+        for key, value in elements.items():
+            if key not in extracted_keys:
+                filtered_elements[key] = value
+
+        if filtered_elements:
+            additional_data["elements"] = filtered_elements
 
         data = {
             "carbonFootprint": {
@@ -747,7 +866,7 @@ class SustainabilitySection(BaseDPPSection):
                     ),
                 },
             },
-            "rawData": processed_carbon,
+            "additionalData": additional_data,
         }
 
         return DPPSection(title="Environmental Impact", data=data)
@@ -761,94 +880,421 @@ class ComplianceSection(BaseDPPSection):
         if not nameplate:
             return None
 
-        processed_nameplate = self.process_submodel(nameplate)
-        elements = processed_nameplate.get("elements", {})
-        markings_list = elements.get("Markings", {}).get("elements", [])
-
-        # Extract standards and certifications from nameplate
-        certifications = []
-        standards = []
+        # Extract markings with detailed structure but cleaner representation
         markings = []
+        markings_element = None
 
-        # Process markings if available
-        if markings_list:
-            for marking in markings_list:
-                marking_data = {}
+        # Find the Markings element
+        for element in nameplate.get("submodelElements", []):
+            if element.get("idShort") == "Markings":
+                markings_element = element
+                break
 
-                # Extract marking info
-                if "MarkingName" in marking:
-                    marking_data["name"] = marking.get("MarkingName", {}).get("value")
-                if "MarkingFile" in marking:
-                    marking_data["file"] = marking.get("MarkingFile", {}).get("value")
-                if "MarkingValidFrom" in marking:
-                    marking_data["validFrom"] = marking.get("MarkingValidFrom", {}).get(
-                        "value"
-                    )
-                if "MarkingValidUntil" in marking:
-                    marking_data["validUntil"] = marking.get(
-                        "MarkingValidUntil", {}
-                    ).get("value")
+        if (
+            markings_element
+            and markings_element.get("modelType") == "SubmodelElementList"
+        ):
+            for marking_item in markings_element.get("value", []):
+                # Create a clean but comprehensive marking object
+                marking_data = {
+                    "properties": {},  # Will store cleaned properties
+                    "name": None,  # Convenient access fields
+                    "file": None,
+                    "designation": None,
+                    "issueDate": None,
+                    "expiryDate": None,
+                    "additionalText": None,
+                }
 
-                if marking_data:
+                # Process each property while preserving essential structure
+                for prop in marking_item.get("value", []):
+                    prop_id = prop.get("idShort")
+
+                    # Create a clean property representation
+                    clean_prop = {
+                        "value": prop.get("value"),
+                        "modelType": prop.get("modelType"),
+                    }
+
+                    # Keep important metadata but skip qualifiers
+                    if "semanticId" in prop:
+                        clean_prop["semanticId"] = prop["semanticId"]
+
+                    if "description" in prop:
+                        clean_prop["description"] = prop["description"]
+
+                    if "contentType" in prop and prop.get("modelType") == "File":
+                        clean_prop["contentType"] = prop["contentType"]
+
+                    # Store the cleaned property
+                    marking_data["properties"][prop_id] = clean_prop
+
+                    # Also set the convenience access fields
+                    if prop_id == "MarkingName":
+                        marking_data["name"] = prop.get("value")
+                    elif prop_id == "MarkingFile":
+                        marking_data["file"] = prop.get("value")
+                    elif prop_id == "DesignationOfCertificateOrApproval":
+                        marking_data["designation"] = prop.get("value")
+                    elif prop_id == "IssueDate":
+                        marking_data["issueDate"] = prop.get("value")
+                    elif prop_id == "ExpiryDate":
+                        marking_data["expiryDate"] = prop.get("value")
+                    elif prop_id == "MarkingAdditionalText":
+                        marking_data["additionalText"] = prop.get("value")
+
+                # Only add marking if it has at least one populated field
+                if any(
+                    v
+                    for v in [
+                        marking_data["name"],
+                        marking_data["file"],
+                        marking_data["designation"],
+                    ]
+                ):
                     markings.append(marking_data)
 
-        data = {
-            "certifications": certifications,
-            "standards": standards,
-            "markings": markings,
-            "rawData": processed_nameplate,
-        }
+        # Extract certifications and standards with clean structure
+        certifications = []
+        standards = []
+        asset_specific_element = None
 
-        return DPPSection(title="Compliance & Standards", data=data)
+        for element in nameplate.get("submodelElements", []):
+            if element.get("idShort") == "AssetSpecificProperties":
+                asset_specific_element = element
+                break
+
+        if asset_specific_element:
+            for prop in asset_specific_element.get("value", []):
+                prop_id = prop.get("idShort", "").lower()
+
+                # Skip non-property elements and empty values
+                if prop.get("modelType") not in [
+                    "Property",
+                    "MultiLanguageProperty",
+                    "File",
+                ]:
+                    continue
+
+                if "value" not in prop:
+                    continue
+
+                # Create clean property object similar to how materials section works
+                clean_prop = {
+                    "name": prop.get("idShort"),
+                    "value": prop.get("value"),
+                    "modelType": prop.get("modelType"),
+                }
+
+                # Keep important metadata but not qualifiers
+                if "semanticId" in prop:
+                    clean_prop["semanticId"] = prop["semanticId"]
+
+                if "description" in prop:
+                    clean_prop["description"] = prop["description"]
+
+                if prop.get("modelType") == "File" and "contentType" in prop:
+                    clean_prop["contentType"] = prop["contentType"]
+
+                # Classify properties based on naming patterns
+                if (
+                    "certif" in prop_id
+                    or "compliance" in prop_id
+                    or "conform" in prop_id
+                ):
+                    certifications.append(clean_prop)
+                elif "standard" in prop_id or "norm" in prop_id or "iso" in prop_id:
+                    standards.append(clean_prop)
+
+        # Create a clean section without unwanted details
+        return DPPSection(
+            title="Compliance & Standards",
+            data={
+                "markings": markings,  # Single, comprehensive markings array
+                "certifications": certifications,
+                "standards": standards,
+                # We drop the "elements" property to keep things cleaner
+            },
+        )
 
 
 class MaterialSection(BaseDPPSection):
     """Material composition and circularity information"""
 
+    def _process_entity_structure(self, entity_node: dict, visited_nodes=None) -> dict:
+        """
+        Recursively process an entity node and all its statements into a clean structure
+        preserving the exact hierarchical position of all properties and semantic information
+
+        Args:
+            entity_node: The entity node to process
+            visited_nodes: Set of node IDs already visited (for cycle detection)
+
+        Returns:
+            Processed entity structure with DPP-relevant data
+        """
+        if visited_nodes is None:
+            visited_nodes = set()
+
+        if not entity_node or not isinstance(entity_node, dict):
+            return {}
+
+        # Generate unique ID for cycle detection
+        node_id = f"{entity_node.get("idShort", '')}-{id(entity_node)}"
+        if node_id in visited_nodes:
+            return {"id": entity_node.get("idShort", "Recursive"), "type": "Reference"}
+
+        visited_nodes.add(node_id)
+
+        # Create node structure with essential information including semantic data
+        result = {
+            "id": entity_node.get("idShort", "Unknown"),
+            "type": entity_node.get("entityType", "Unknown"),
+            "components": [],
+            "modelType": entity_node.get("modelType"),  # Keep modelType
+        }
+
+        # Include semanticId if available (important for DPP context)
+        if "semanticId" in entity_node:
+            result["semanticId"] = entity_node["semanticId"]
+
+        # Include globalAssetId if available (important for asset reference)
+        if "globalAssetId" in entity_node:
+            result["globalAssetId"] = entity_node["globalAssetId"]
+
+        # Include description
+        if "description" in entity_node:
+            result["description"] = entity_node["description"]
+
+        # Process all statements while dynamically attaching properties directly to the node
+        if "statements" in entity_node and isinstance(entity_node["statements"], list):
+            for statement in entity_node["statements"]:
+                stmt_id = statement.get("idShort")
+                stmt_type = statement.get("modelType")
+
+                # Skip invalid statements without an ID
+                if not stmt_id:
+                    continue
+
+                # Process based on statement type
+                if stmt_type == "Property":
+                    # Process property with metadata
+                    prop_obj = {
+                        "value": None,  # Default value is null
+                        "valueType": statement.get("valueType", "unknown"),
+                        "modelType": "Property",  # Keep modelType
+                    }
+
+                    # Include semanticId if available
+                    if "semanticId" in statement:
+                        prop_obj["semanticId"] = statement["semanticId"]
+
+                    # Add description if available
+                    if "description" in statement:
+                        prop_obj["description"] = statement["description"]
+
+                    # Extract and convert value based on type
+                    if "value" in statement:
+                        value = statement["value"]
+                        value_type = statement.get("valueType")
+
+                        if (
+                            value_type == "xs:integer"
+                            or value_type == "xs:unsignedLong"
+                        ):
+                            try:
+                                prop_obj["value"] = int(value)
+                            except (ValueError, TypeError):
+                                prop_obj["value"] = value
+                        elif value_type in ["xs:double", "xs:float"]:
+                            try:
+                                prop_obj["value"] = float(value)
+                            except (ValueError, TypeError):
+                                prop_obj["value"] = value
+                        elif value_type == "xs:boolean":
+                            if isinstance(value, str):
+                                prop_obj["value"] = value.lower() in (
+                                    "true",
+                                    "1",
+                                    "yes",
+                                )
+                            else:
+                                prop_obj["value"] = bool(value)
+                        else:
+                            prop_obj["value"] = value
+
+                    # Set the property in the result
+                    result[stmt_id] = prop_obj
+
+                elif stmt_type == "MultiLanguageProperty":
+                    # Process MultiLanguageProperty with metadata
+                    result[stmt_id] = {
+                        "value": statement.get("value", []),
+                        "modelType": "MultiLanguageProperty",
+                    }
+                    if "semanticId" in statement:
+                        result[stmt_id]["semanticId"] = statement["semanticId"]
+                    if "description" in statement:
+                        result[stmt_id]["description"] = statement["description"]
+
+                elif stmt_type == "File":
+                    # Process File with metadata
+                    result[stmt_id] = {
+                        "value": statement.get("value"),
+                        "contentType": statement.get("contentType"),
+                        "modelType": "File",
+                    }
+                    if "semanticId" in statement:
+                        result[stmt_id]["semanticId"] = statement["semanticId"]
+                    if "description" in statement:
+                        result[stmt_id]["description"] = statement["description"]
+
+                elif stmt_type == "Entity":
+                    # Process nested entity recursively
+                    component = self._process_entity_structure(statement, visited_nodes)
+                    if component:  # Only add non-empty components
+                        result["components"].append(component)
+
+        return result
+
     def process(self) -> DPPSection | None:
-        hierarchy = self.get_submodel(SubmodelIdentifiers.HIERARCHY)
+        """Process material composition information with better additionalData handling."""
+        # Find the hierarchical structure submodel
+        hierarchy = self.get_submodel(SubmodelIdentifiers.HIERARCHICAL_STRUCTURE)
         if not hierarchy:
             return None
 
+        # Process the submodel for a general overview
         processed_hierarchy = self.process_submodel(hierarchy)
+
+        # Extract top-level properties directly
         elements = processed_hierarchy.get("elements", {})
+        arche_type = None
+        if "ArcheType" in elements and "value" in elements["ArcheType"]:
+            arche_type = elements["ArcheType"]["value"]
 
-        # Extract the EntryNode element which contains the hierarchical structure
-        entry_node = elements.get("EntryNode", {})
-        arche_type = elements.get("ArcheType", {}).get("value", "Unknown")
+        # Find the entry node for exact structure processing
+        entry_node = None
+        for element in hierarchy.get("submodelElements", []):
+            if (
+                element.get("idShort") == "EntryNode"
+                and element.get("modelType") == "Entity"
+            ):
+                entry_node = element
+                break
 
-        def process_node(node: dict[str, Any]) -> dict[str, Any]:
-            """Process a node in the hierarchy to extract the component structure."""
-            if not node:
-                return {}
+        # Process the component structure
+        structure = {}
+        if entry_node:
+            structure = self._process_entity_structure(entry_node)
 
-            result = {
-                "id": node.get("idShort"),
-                "type": node.get("entityType"),
-                "globalAssetId": node.get("globalAssetId"),
-                "components": [],
-            }
+        # Extract recycling information by dynamically searching the entire structure
+        recycling_info = {
+            "recyclable": True,  # Default assumption
+            "materials": [],
+        }
 
-            # Process statements which contain child components
-            statements = node.get("statements", [])
-            for statement in statements:
-                if statement.get("modelType") == "Entity":
-                    result["components"].append(process_node(statement))
+        def find_properties_anywhere(data, path=""):
+            """Recursively search for properties anywhere in the structure."""
+            if isinstance(data, dict):
+                for key, value in list(data.items()):
+                    current_path = f"{path}.{key}" if path else key
 
-            return result
+                    # Skip certain structural keys that aren't properties
+                    if key in ["components", "id", "type"]:
+                        continue
 
-        # Process the entry node to build the hierarchical structure
-        structure = process_node(entry_node)
+                    # Process based on the key and value type
+                    key_str = str(key).lower()
 
-        # Build material data structure
+                    # Check for recycling indicators
+                    if "recycl" in key_str:
+                        if isinstance(value, dict) and "value" in value:
+                            # Extract value from property object
+                            actual_value = value["value"]
+                            if isinstance(actual_value, bool):
+                                recycling_info["recyclable"] = actual_value
+                            elif isinstance(actual_value, str):
+                                recycling_info["recyclable"] = actual_value.lower() in (
+                                    "true",
+                                    "1",
+                                    "yes",
+                                )
+                        elif not isinstance(value, (dict | list)):
+                            # Direct value
+                            if isinstance(value, bool):
+                                recycling_info["recyclable"] = value
+                            elif isinstance(value, str):
+                                recycling_info["recyclable"] = value.lower() in (
+                                    "true",
+                                    "1",
+                                    "yes",
+                                )
+
+                    # Check for material information
+                    if any(term in key_str for term in ["material", "substance"]):
+                        material_info = {}
+
+                        # Extract metadata for property objects
+                        if isinstance(value, dict):
+                            material_name = key
+                            material_value = value.get("value")
+
+                            if "semanticId" in value:
+                                material_info["semanticId"] = value["semanticId"]
+
+                            material_info.update(
+                                {
+                                    "name": material_name,
+                                    "path": current_path,
+                                    "value": material_value,
+                                }
+                            )
+
+                            recycling_info["materials"].append(material_info)
+                        elif not isinstance(value, list):
+                            # For direct values
+                            recycling_info["materials"].append(
+                                {"name": key, "path": current_path, "value": value}
+                            )
+
+                    # Recursively process nested dictionaries
+                    if isinstance(value, dict):
+                        find_properties_anywhere(value, current_path)
+
+                # Continue recursion for nested components
+                if "components" in data and isinstance(data["components"], list):
+                    for i, component in enumerate(data["components"]):
+                        component_path = f"{path}.components[{i}]"
+                        find_properties_anywhere(component, component_path)
+
+            elif isinstance(data, list):
+                for i, item in enumerate(data):
+                    item_path = f"{path}[{i}]"
+                    if isinstance(item, (dict | list)):
+                        find_properties_anywhere(item, item_path)
+
+        # Search through the complete structure
+        find_properties_anywhere(structure)
+
+        # Create filtered additionalData with only properties not already extracted
+        extracted_keys = ["EntryNode", "ArcheType"]
+
+        additional_data = {
+            "metadata": processed_hierarchy.get("metadata", {}),
+            "elements": {},
+        }
+
+        # Only include elements we haven't explicitly handled
+        for key, value in elements.items():
+            if key not in extracted_keys:
+                additional_data["elements"][key] = value
+
         data = {
             "structure": structure,
             "archeType": arche_type,
-            "recycling": {
-                "recyclable": True,  # Default value, should be derived from actual data
-                "materials": [],  # Material components, to be populated from hierarchy
-            },
-            "rawData": processed_hierarchy,
+            "recycling": recycling_info,
+            "additionalData": additional_data,
         }
 
         return DPPSection(title="Materials & Composition", data=data)
@@ -963,17 +1409,34 @@ class DocumentationSection(BaseDPPSection):
                 if doc_data:
                     documents.append(doc_data)
 
+        # Create filtered additionalData with only properties not covered in the structured data
+        extracted_keys = []
+        for key in elements.keys():
+            if key.startswith("Document") or key == "numberOfDocuments":
+                extracted_keys.append(key)
+
+        additional_data = {"metadata": processed_docs.get("metadata", {})}
+
+        # Only include elements we haven't explicitly handled
+        filtered_elements = {}
+        for key, value in elements.items():
+            if key not in extracted_keys:
+                filtered_elements[key] = value
+
+        if filtered_elements:
+            additional_data["elements"] = filtered_elements
+
         data = {
             "documents": documents,
             "totalDocuments": elements.get("numberOfDocuments", {}).get("value"),
-            "rawData": processed_docs,
+            "additionalData": additional_data,
         }
 
         return DPPSection(title="Documentation", data=data)
 
 
 class LocationSection(BaseDPPSection):
-    """Asset location tracking information"""
+    """Asset location tracking and traceability information"""
 
     def process(self) -> DPPSection | None:
         location = self.get_submodel(SubmodelIdentifiers.ASSET_LOCATION)
@@ -983,55 +1446,478 @@ class LocationSection(BaseDPPSection):
         processed_location = self.process_submodel(location)
         elements = processed_location.get("elements", {})
 
-        # Process address information
-        addresses = []
-        addresses_data = elements.get("Addresses", {})
-        if addresses_data and "elements" in addresses_data:
-            for addr in addresses_data.get("elements", []):
-                address = {
-                    "addressLine1": addr.get("AddressLine1", {}).get("value"),
-                    "addressLine2": addr.get("AddressLine2", {}).get("value"),
-                    "addressLine3": addr.get("AddressLine3", {}).get("value"),
-                    "city": addr.get("Citytown", {}).get("value"),
-                    "state": addr.get("Statecounty", {}).get("value"),
-                    "zip": addr.get("ZipCode", {}).get("value"),
-                    "country": addr.get("NationalCode", {}).get("value"),
-                }
-                addresses.append(address)
+        # Create filtered additionalData with only properties not already extracted
+        extracted_keys = ["AssetLocatingInformation", "AssetTraces"]
 
-        # Process coordinate systems
-        coordinate_systems = []
-        coord_systems_data = elements.get("CoordinateSystems", {})
-        if coord_systems_data and "elements" in coord_systems_data:
-            for cs in coord_systems_data.get("elements", []):
-                coord_system = {
-                    "name": cs.get("CoordinateSystemName", {}).get("value"),
-                    "id": cs.get("CoordinateSystemId", {}).get("value"),
-                    "type": cs.get("CoordinateSystemType", {}).get("value"),
-                }
-                coordinate_systems.append(coord_system)
+        additional_data = {"metadata": processed_location.get("metadata", {})}
 
-        # Process location tracking information
-        tracking_info = elements.get("AssetLocatingInformation", {}).get("elements", {})
-        location_info = {
-            "localizable": tracking_info.get("Localizable", {}).get("value"),
-            "realTimeCapability": tracking_info.get(
-                "AssetLocationServiceRealTimeCapability", {}
-            ).get("value"),
-            "sourceType": tracking_info.get("RealtimeLocationSourceType", {}).get(
-                "value"
-            ),
-            "source": tracking_info.get("RealtimeLocationSource", {}).get("value"),
-        }
+        # Only include elements we haven't explicitly handled
+        filtered_elements = {}
+        for key, value in elements.items():
+            if key not in extracted_keys:
+                filtered_elements[key] = value
 
+        if filtered_elements:
+            additional_data["elements"] = filtered_elements
+
+        # Build a comprehensive data structure with all existing data
         data = {
-            "addresses": addresses,
-            "coordinateSystems": coordinate_systems,
-            "locationInfo": location_info,
-            "rawData": processed_location,
+            # Always include title and description
+            "title": self._extract_display_name(location),
+            "description": self._extract_description(location),
+            # Process the key structures while preserving original data
+            "trackingCapabilities": self._process_tracking_capabilities(elements),
+            "traceability": self._process_traceability(elements),
+            # Include fields (including empty ones) for structural consistency
+            "addresses": [],
+            "coordinateSystems": [],
+            "visitedAreas": [],
+            # Include filtered additionalData
+            "additionalData": additional_data,
         }
 
-        return DPPSection(title="Asset Location", data=data)
+        # Process areas if they exist - overriding the empty arrays only when we find them
+        addresses_element = self._find_element_by_id(
+            location.get("submodelElements", []), "Addresses"
+        )
+        if addresses_element:
+            data["addresses"] = self._process_addresses(addresses_element)
+
+        coordinates_element = self._find_element_by_id(
+            location.get("submodelElements", []), "CoordinateSystems"
+        )
+        if coordinates_element:
+            data["coordinateSystems"] = self._process_coordinate_systems(
+                coordinates_element
+            )
+
+        areas_element = self._find_element_by_id(
+            location.get("submodelElements", []), "VisitedAreas"
+        )
+        if areas_element:
+            data["visitedAreas"] = self._process_visited_areas(areas_element)
+
+        return DPPSection(title="Asset Location & Traceability", data=data)
+
+    def _find_element_by_id(self, elements: list, id_short: str) -> dict:
+        """Find an element by its idShort."""
+        for element in elements:
+            if element.get("idShort") == id_short:
+                return element
+        return {}
+
+    def _extract_display_name(self, element):
+        """Extract display name from an element."""
+        if not element:
+            return {}
+
+        if "displayName" in element:
+            return {
+                item.get("language"): item.get("text")
+                for item in element.get("displayName", [])
+                if "language" in item and "text" in item
+            }
+        return {}
+
+    def _extract_description(self, element):
+        """Extract description from an element."""
+        if not element:
+            return {}
+
+        if "description" in element:
+            return {
+                item.get("language"): item.get("text")
+                for item in element.get("description", [])
+                if "language" in item and "text" in item
+            }
+        return {}
+
+    def _process_tracking_capabilities(self, elements):
+        """Process asset location capabilities preserving original structure."""
+        asset_locating = elements.get("AssetLocatingInformation", {})
+        if not asset_locating:
+            return {}
+
+        locating_elements = asset_locating.get("elements", {})
+        if not locating_elements:
+            return {}
+
+        result = {}
+
+        # Process each capability while preserving original metadata
+        for key, element in locating_elements.items():
+            if key == "Localizable":
+                result["localizable"] = {
+                    "value": element.get("value", False),
+                    "displayName": element.get("displayName", {}),
+                }
+            elif key == "AssetLocationServiceRealTimeCapability":
+                result["realTimeCapability"] = {
+                    "value": element.get("value", {}),
+                    "displayName": element.get("displayName", {}),
+                    "description": element.get("description", {}),
+                }
+            elif key == "RealtimeLocationSourceType":
+                result["sourceType"] = {
+                    "value": element.get("value", ""),
+                    "displayName": element.get("displayName", {}),
+                }
+            elif key == "RealtimeLocationSource":
+                result["source"] = {
+                    "value": element.get("value", {}),
+                    "displayName": element.get("displayName", {}),
+                }
+            # Process any other elements preserving full structure and metadata
+            else:
+                result[self._normalize_field_name(key)] = {
+                    "value": element.get("value"),
+                    "displayName": element.get("displayName", {}),
+                    "description": element.get("description", {}),
+                    "semanticId": element.get("semanticId", {}),
+                }
+
+        return result
+
+    def _process_addresses(self, addresses_element):
+        """Process address data from the raw element."""
+        addresses = []
+
+        # Process each address in the collection
+        for address in addresses_element.get("value", []):
+            address_data = {
+                "metadata": {
+                    "displayName": self._extract_display_name(address),
+                    "description": self._extract_description(address),
+                },
+                "data": {},
+            }
+
+            # Process address fields - include fields even if value is null/undefined
+            address_fields = {
+                "AddressLine1": "addressLine1",
+                "AddressLine2": "addressLine2",
+                "AddressLine3": "addressLine3",
+                "Citytown": "city",
+                "City": "city",
+                "Street": "street",
+                "Statecounty": "state",
+                "StateCounty": "state",
+                "ZipCode": "zip",
+                "NationalCode": "country",
+                "AddressRemarks": "remarks",
+                "AddressOfAdditionalLink": "additionalLink",
+            }
+
+            # First loop to find all fields regardless of their value
+            for field in address.get("value", []):
+                field_id = field.get("idShort")
+                if not field_id:
+                    continue
+
+                # Map standard fields to consistent names
+                mapped_name = address_fields.get(
+                    field_id, self._normalize_field_name(field_id)
+                )
+
+                # Always include the field even if value is null
+                if "value" in field:
+                    address_data["data"][mapped_name] = field["value"]
+                else:
+                    address_data["data"][mapped_name] = None
+
+            addresses.append(address_data)
+
+        return addresses
+
+    def _process_coordinate_systems(self, coord_systems_element):
+        """Process coordinate systems data from the raw element."""
+        coordinate_systems = []
+
+        # Process each coordinate system
+        for cs in coord_systems_element.get("value", []):
+            cs_data = {
+                "metadata": {
+                    "displayName": self._extract_display_name(cs),
+                    "description": self._extract_description(cs),
+                },
+                "properties": {},
+                "groundControlPoints": [],
+            }
+
+            # Standard coordinate system field mapping
+            cs_fields = {
+                "CoordinateSystemName": "name",
+                "CoordinateSystemId": "id",
+                "CoordinateSystemType": "type",
+                "CoordinateSystemAccuracy": "accuracy",
+                "CoordinateSystemUnit": "unit",
+                "ElevationReference": "elevationReference",
+                "SeaLevelOfBaseHeight": "seaLevelBaseHeight",
+            }
+
+            # Process all properties including null values
+            for field in cs.get("value", []):
+                if not field or "idShort" not in field:
+                    continue
+
+                field_id = field["idShort"]
+
+                # Special handling for ground control points
+                if field_id == "GroundControlPoints":
+                    cs_data[
+                        "groundControlPoints"
+                    ] = self._process_ground_control_points(field)
+                    continue
+
+                # Handle regular properties - include even if value is null/empty
+                field_name = cs_fields.get(
+                    field_id, self._normalize_field_name(field_id)
+                )
+                cs_data["properties"][field_name] = field.get("value")
+
+            coordinate_systems.append(cs_data)
+
+        return coordinate_systems
+
+    def _process_ground_control_points(self, gcp_element):
+        """Process ground control points data."""
+        points = []
+
+        for point in gcp_element.get("value", []):
+            point_data = {"geographic": {}, "relative": {}}
+
+            # Process geographic and relative coordinates including nulls
+            for coord_element in point.get("value", []):
+                if coord_element.get("idShort") == "GeographicCoordinates":
+                    # Process all geographic coordinates
+                    for geo_coord in coord_element.get("value", []):
+                        if geo_coord.get("idShort") in [
+                            "Longitude",
+                            "Latitude",
+                            "Altitude",
+                        ]:
+                            point_data["geographic"][
+                                geo_coord["idShort"].lower()
+                            ] = geo_coord.get("value")
+
+                elif coord_element.get("idShort") == "RelativeCoordinates":
+                    # Process all relative coordinates
+                    for rel_coord in coord_element.get("value", []):
+                        if rel_coord.get("idShort") in ["X", "Y", "Z"]:
+                            point_data["relative"][
+                                rel_coord["idShort"].lower()
+                            ] = rel_coord.get("value")
+
+                # Add any other coordinate elements that don't fit the standard structure
+                else:
+                    field_name = self._normalize_field_name(
+                        coord_element.get("idShort", "")
+                    )
+                    if field_name:
+                        point_data[field_name] = coord_element.get("value")
+
+            points.append(point_data)
+
+        return points
+
+    def _process_visited_areas(self, visited_areas_element):
+        """Process visited areas data from the raw element."""
+        areas = []
+
+        for area in visited_areas_element.get("value", []):
+            area_data = {
+                "metadata": {
+                    "displayName": self._extract_display_name(area),
+                    "description": self._extract_description(area),
+                },
+                "properties": {},
+                "regionCoordinates": [],
+                "addressReferences": [],
+            }
+
+            # Process all area properties including nulls
+            for field in area.get("value", []):
+                if not field or "idShort" not in field:
+                    continue
+
+                field_id = field["idShort"]
+
+                # Special handling for nested collections
+                if field_id == "AreaRegionCoordinates":
+                    area_data["regionCoordinates"] = self._process_region_coordinates(
+                        field
+                    )
+                elif field_id == "AddressReferences":
+                    area_data["addressReferences"] = self._process_address_references(
+                        field
+                    )
+                else:
+                    # Handle different property types
+                    if field.get("modelType") == "ReferenceElement":
+                        area_data["properties"][
+                            self._normalize_field_name(field_id)
+                        ] = field.get("value")
+                    elif field.get("modelType") == "File":
+                        area_data["properties"][
+                            self._normalize_field_name(field_id)
+                        ] = field.get("value")
+                    elif field.get("modelType") == "MultiLanguageProperty":
+                        area_data["properties"][
+                            self._normalize_field_name(field_id)
+                        ] = field.get("value", [])
+                    else:
+                        # Regular property - include even if value is null
+                        area_data["properties"][
+                            self._normalize_field_name(field_id)
+                        ] = field.get("value")
+
+            areas.append(area_data)
+
+        return areas
+
+    def _process_region_coordinates(self, coordinates_element):
+        """Process region coordinates for an area."""
+        coordinates = []
+
+        for coord in coordinates_element.get("value", []):
+            coord_data = {}
+
+            # Process all fields including nulls
+            for field in coord.get("value", []):
+                if not field or "idShort" not in field:
+                    continue
+
+                field_id = field["idShort"]
+
+                # Handle X, Y, Z coordinates - they may be strings that need conversion in UI
+                if field_id in ["X", "Y", "Z"]:
+                    coord_data[field_id.lower()] = field.get("value")
+                else:
+                    coord_data[self._normalize_field_name(field_id)] = field.get(
+                        "value"
+                    )
+
+            coordinates.append(coord_data)
+
+        return coordinates
+
+    def _process_address_references(self, references_element):
+        """Process address references for an area."""
+        references = []
+
+        for ref in references_element.get("value", []):
+            ref_data = {
+                "value": ref.get("value"),
+                "description": self._extract_description(ref),
+            }
+
+            # Add any other available fields for completeness
+            if "semanticId" in ref:
+                ref_data["semanticId"] = ref["semanticId"]
+
+            references.append(ref_data)
+
+        return references
+
+    def _process_traceability(self, elements):
+        """Process asset traces preserving all original data."""
+        asset_traces = elements.get("AssetTraces", {})
+        if not asset_traces:
+            return {}
+
+        result = {
+            "displayName": asset_traces.get("displayName", {}),
+            "description": asset_traces.get("description", {}),
+            "references": {},
+            "records": {"area": [], "location": []},
+        }
+
+        # Process reference elements
+        for key, element in asset_traces.get("elements", {}).items():
+            if element.get("modelType") == "ReferenceElement":
+                field_name = self._normalize_field_name(key)
+                result["references"][field_name] = {
+                    "type": "reference",
+                    "value": element.get("value", {}),
+                    "description": element.get("description", {}),
+                }
+
+                if "semanticId" in element:
+                    result["references"][field_name]["semanticId"] = element[
+                        "semanticId"
+                    ]
+
+        # Process area records
+        area_records = asset_traces.get("elements", {}).get("AreaRecords", {})
+        if area_records:
+            for record in area_records.get("value", []):
+                record_data = {}
+
+                for field in record.get("value", []):
+                    if not field or "idShort" not in field:
+                        continue
+
+                    field_name = self._normalize_field_name(field["idShort"])
+
+                    # Handle different field types
+                    if field.get("modelType") == "ReferenceElement":
+                        record_data[field_name] = field.get("value", {})
+                    else:
+                        record_data[field_name] = field.get("value")
+
+                result["records"]["area"].append(record_data)
+
+        # Process location records
+        location_records = asset_traces.get("elements", {}).get("LocationRecords", {})
+        if location_records:
+            for record in location_records.get("value", []):
+                record_data = {}
+
+                for field in record.get("value", []):
+                    if not field or "idShort" not in field:
+                        continue
+
+                    field_id = field["idShort"]
+                    field_name = self._normalize_field_name(field_id)
+
+                    # Special handling for Position
+                    if (
+                        field_id == "Position"
+                        and field.get("modelType") == "SubmodelElementCollection"
+                    ):
+                        position = {}
+
+                        for pos_field in field.get("value", []):
+                            if pos_field.get("idShort") in ["X", "Y", "Z"]:
+                                position[pos_field["idShort"].lower()] = pos_field.get(
+                                    "value"
+                                )
+
+                        record_data["position"] = position
+                    else:
+                        # Regular property - include even if value is null
+                        record_data[field_name] = field.get("value")
+
+                result["records"]["location"].append(record_data)
+
+        return result
+
+    def _normalize_field_name(self, name):
+        """Convert field names to camelCase."""
+        if not name:
+            return ""
+
+        # Handle special cases for numeric indexes in names
+        if "__" in name:
+            name = name.replace("__", "_")
+
+        parts = name.split("_")
+        result = parts[0].lower()
+        for part in parts[1:]:
+            if part:
+                result += part[0].upper() + part[1:].lower()
+
+        return result
 
 
 class UsageSection(BaseDPPSection):
@@ -1179,6 +2065,20 @@ class UsageSection(BaseDPPSection):
             }
             internal_segments.append(segment)
 
+        # Create filtered additionalData with only properties not already extracted
+        extracted_keys = ["Metadata", "Segments"]
+
+        additional_data = {"metadata": processed_ts.get("metadata", {})}
+
+        # Only include elements we haven't explicitly handled
+        filtered_elements = {}
+        for key, value in elements.items():
+            if key not in extracted_keys:
+                filtered_elements[key] = value
+
+        if filtered_elements:
+            additional_data["elements"] = filtered_elements
+
         data = {
             "name": self._extract_multilang_value(metadata.get("Name", {})),
             "description": self._extract_multilang_value(
@@ -1190,7 +2090,7 @@ class UsageSection(BaseDPPSection):
                 "linked": linked_segments,
                 "internal": internal_segments,
             },
-            "rawData": processed_ts,
+            "additionalData": additional_data,
         }
 
         return DPPSection(title="Usage Data", data=data)
@@ -1244,12 +2144,12 @@ def get_available_sections(aas_data: dict[str, Any]) -> list[DPPSectionInfo]:
 # Map section IDs to processor classes
 SECTION_PROCESSORS = {
     "identification": IdentificationSection,
-    "compliance": ComplianceSection,
-    "technical": TechnicalDataSection,
+    "compliance": ComplianceSection,  # Changed from "technical"
+    "technical": TechnicalDataSection,  # Changed from "business"
     "materials": MaterialSection,
     "sustainability": SustainabilitySection,
     "documentation": DocumentationSection,
-    "business": BusinessInfoSection,
+    "business": BusinessInfoSection,  # This matches the config now
     "location": LocationSection,
     "usage": UsageSection,
 }
