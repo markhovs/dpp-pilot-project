@@ -25,9 +25,6 @@ const AasDetails = () => {
   // Ensure `aas` is treated as an object
   const aasData = aas as Record<string, any>;
 
-  // Debug: Log the data structure
-  console.log("AAS data received:", aasData);
-
   // Better handling of display name data
   const displayName = aasData.displayName?.find((d: any) => d.language === "en")?.text
     || aasData.displayName?.[0]?.text
@@ -53,9 +50,6 @@ const AasDetails = () => {
   if (globalAssetId === "urn:default:global" && !description) {
     description = "Test AAS Template for Digital Product Passport demonstration";
   }
-
-  // Debug: Log what we found
-  console.log("Extracted description:", description);
 
   return (
     <Container maxW="full" py={6}>

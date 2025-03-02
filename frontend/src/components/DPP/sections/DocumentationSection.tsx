@@ -1,7 +1,8 @@
+import React from 'react';
 import {
   Box, Heading, Text, VStack, HStack, Icon, Badge,
   useColorModeValue, SimpleGrid, Card, CardBody, Button,
-  Image, Flex, Divider, Tag
+  Image, Tag
 } from "@chakra-ui/react";
 import {
   MdDescription, MdOpenInNew, MdFilePresent, MdLanguage,
@@ -10,10 +11,34 @@ import {
 import { DPPSection } from "../../../types/dpp";
 import { getFirstLangValue } from "../../../utils/dpp";
 import AdditionalDataSection from "../AdditionalDataSection";
-import FileRenderer from "../renderers/FileRenderer";
+
+// Define interfaces for document data
+interface DocumentItem {
+  title?: string | Record<string, string>;
+  subtitle?: string | Record<string, string>;
+  description?: string | Record<string, string>;
+  file?: string;
+  previewFile?: string;
+  isPrimary?: boolean;
+  organization?: string;
+  domain?: string;
+  status?: string;
+  statusDate?: string;
+  language?: string;
+  identifier?: string;
+  classId?: string;
+  classificationSystem?: string;
+  [key: string]: any;
+}
+
+interface DocumentationSectionData {
+  documents?: DocumentItem[];
+  totalDocuments?: number;
+  additionalData?: Record<string, unknown>;
+}
 
 interface DocumentationSectionProps {
-  section: DPPSection;
+  section: DPPSection & { data?: { data?: DocumentationSectionData } };
   developerMode: boolean;
   setSelectedImage?: (url: string | null) => void;
   setSelectedPdf?: (url: string | null) => void;
@@ -29,7 +54,7 @@ const DocumentationSection: React.FC<DocumentationSectionProps> = ({
 }) => {
   // Fix data access to match API response structure
   const sectionData = section?.data || {};
-  const data = sectionData.data || {};
+  const data = sectionData.data || {} as DocumentationSectionData;
   const { documents = [], totalDocuments = 0, additionalData } = data;
 
   // Theme colors
@@ -37,15 +62,14 @@ const DocumentationSection: React.FC<DocumentationSectionProps> = ({
   const borderColor = useColorModeValue("gray.200", "gray.600");
   const headerBg = useColorModeValue("gray.50", "gray.700");
   const labelColor = useColorModeValue("gray.600", "gray.400");
-  const accentBg = useColorModeValue("blue.50", "blue.900");
 
-  // Helper function to render multi-language values
-  const renderMultiLangValue = (value: any) => {
+  // Helper function to render multi-language values with proper typing
+  const renderMultiLangValue = (value: any): React.ReactNode => {
     if (!value) return null;
 
-    // If it's not an object or has no language keys, render directly
+    // If it's not an object or has no language keys, render directly as string
     if (typeof value !== 'object' || !Object.keys(value).length) {
-      return <Text>{value}</Text>;
+      return <Text>{String(value)}</Text>;
     }
 
     // Render multi-language
@@ -54,7 +78,7 @@ const DocumentationSection: React.FC<DocumentationSectionProps> = ({
         {Object.entries(value).map(([lang, text]) => (
           <HStack key={lang}>
             <Tag size="sm" colorScheme="blue" variant="subtle">{lang}</Tag>
-            <Text>{text}</Text>
+            <Text>{String(text)}</Text>
           </HStack>
         ))}
       </VStack>
@@ -62,7 +86,7 @@ const DocumentationSection: React.FC<DocumentationSectionProps> = ({
   };
 
   // Handle document selection
-  const handleDocumentClick = (doc: any) => {
+  const handleDocumentClick = (doc: DocumentItem) => {
     if (!doc) return;
 
     if (doc.file) {
@@ -108,7 +132,7 @@ const DocumentationSection: React.FC<DocumentationSectionProps> = ({
 
         {/* Documents Display Grid */}
         <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} spacing={5}>
-          {documents.map((doc: any, index: number) => (
+          {documents.map((doc: DocumentItem, index: number) => (
             <Card key={index} variant="outline" overflow="hidden">
               {/* Preview Image */}
               {doc.previewFile && (

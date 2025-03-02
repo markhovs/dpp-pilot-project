@@ -1,29 +1,98 @@
 import React from 'react';
 import {
-  Box, Heading, Text, VStack, HStack, Icon, Badge,
-  useColorModeValue, SimpleGrid, Card, CardBody, Divider,
-  Avatar, Link, Flex, Tag, Spacer, Tooltip, Button
+  Box,
+  Heading,
+  Text,
+  VStack,
+  HStack,
+  Icon,
+  Badge,
+  useColorModeValue,
+  SimpleGrid,
+  Card,
+  CardBody,
+  Avatar,
+  Link,
+  Tag,
+  Spacer,
+  Tooltip,
+  Button,
 } from '@chakra-ui/react';
 import {
-  MdBusiness, MdEmail, MdPhone, MdLocationOn, MdLink,
-  MdPerson, MdApartment, MdContacts, MdInfo, MdLanguage
+  MdBusiness,
+  MdEmail,
+  MdPhone,
+  MdLocationOn,
+  MdLink,
+  MdApartment,
+  MdContacts,
+  MdInfo,
+  MdLanguage,
 } from 'react-icons/md';
-import { DPPSection } from '../../../types/dpp';
-import { getFirstLangValue, isEmail, isPhoneNumber, isURL } from '../../../utils/dpp';
+import { DPPSection, MultiLanguageValue, LanguageItem } from '../../../types/dpp';
+import { getFirstLangValue } from '../../../utils/dpp';
 import AdditionalDataSection from '../AdditionalDataSection';
 
+// Type definitions for business section data
+interface Address {
+  street?: string | MultiLanguageValue;
+  city?: string | MultiLanguageValue;
+  postCode?: string | MultiLanguageValue;
+  stateCounty?: string | MultiLanguageValue;
+  country?: string | MultiLanguageValue;
+}
+
+interface Communication {
+  email?: string | MultiLanguageValue | LanguageItem[];
+  phone?: string | MultiLanguageValue | LanguageItem[];
+  language?: string;
+  [key: string]: string | MultiLanguageValue | LanguageItem[] | undefined;
+}
+
+interface BusinessContact {
+  firstName?: string | MultiLanguageValue;
+  title?: string | MultiLanguageValue;
+  academicTitle?: string | MultiLanguageValue;
+  role?: string;
+  company?: string | MultiLanguageValue;
+  department?: string | MultiLanguageValue;
+  address?: Address | string;
+  website?: string;
+  description?: string | MultiLanguageValue;
+  communication?: Communication;
+}
+
+interface BusinessPartner {
+  name: string | MultiLanguageValue;
+  type?: string;
+  website?: string;
+  description?: string | MultiLanguageValue;
+}
+
+interface BusinessRelationship {
+  type?: string;
+  name: string | MultiLanguageValue;
+  description?: string | MultiLanguageValue;
+}
+
+interface BusinessSectionData {
+  data?: {
+    contacts?: BusinessContact[];
+    partners?: BusinessPartner[];
+    relationships?: BusinessRelationship[];
+    additionalData?: Record<string, unknown>;
+  };
+}
+
 interface BusinessSectionProps {
-  section: DPPSection;
+  section: DPPSection & BusinessSectionData;
   developerMode: boolean;
   setSelectedImage?: (url: string | null) => void;
   setSelectedPdf?: (url: string | null) => void;
   setSelectedDocument?: (doc: any | null) => void;
 }
 
-const BusinessSection: React.FC<BusinessSectionProps> = ({
-  section,
-  developerMode
-}) => {
+const BusinessSection: React.FC<BusinessSectionProps> = ({ section, developerMode }) => {
   // Fix data access to match API response structure
   const sectionData = section?.data || {};
   const data = sectionData.data || {};
@@ -36,20 +105,24 @@ const BusinessSection: React.FC<BusinessSectionProps> = ({
   const headerBg = useColorModeValue('gray.50', 'gray.700');
 
   // Helper function to render multi-language values
-  const renderMultiLangValue = (value: any) => {
+  const renderMultiLangValue = (
+    value: string | MultiLanguageValue | undefined
+  ): React.ReactNode => {
     if (!value) return null;
 
-    // If it's not an object or has no language keys, render directly
-    if (typeof value !== 'object' || !Object.keys(value).length) {
+    // If it's a string, render directly
+    if (typeof value === 'string') {
       return <Text>{value}</Text>;
     }
 
     // Render multi-language
     return (
-      <VStack align="start" spacing={1}>
+      <VStack align='start' spacing={1}>
         {Object.entries(value).map(([lang, text]) => (
           <HStack key={lang}>
-            <Tag size="sm" colorScheme="blue" variant="subtle">{lang}</Tag>
+            <Tag size='sm' colorScheme='blue' variant='subtle'>
+              {lang}
+            </Tag>
             <Text>{text}</Text>
           </HStack>
         ))}
@@ -58,8 +131,8 @@ const BusinessSection: React.FC<BusinessSectionProps> = ({
   };
 
   // Format address object into a displayable string
-  const formatAddress = (addressObj: any): string => {
-    if (!addressObj) return "";
+  const formatAddress = (addressObj: Address | string | undefined): string => {
+    if (!addressObj) return '';
 
     // Handle if address is just a string
     if (typeof addressObj === 'string') return addressObj;
@@ -84,7 +157,7 @@ const BusinessSection: React.FC<BusinessSectionProps> = ({
       if (city) cityParts.push(city);
     }
     if (cityParts.length > 0) {
-      parts.push(cityParts.join(" "));
+      parts.push(cityParts.join(' '));
     }
 
     // Add state/county
@@ -99,81 +172,98 @@ const BusinessSection: React.FC<BusinessSectionProps> = ({
       if (country) parts.push(country);
     }
 
-    return parts.join(", ");
+    return parts.join(', ');
   };
 
-  // Helper function to get communication property value
-  const getCommunicationValue = (contact: any, propName: string): string => {
-    if (!contact.communication) return "";
+  // Helper function to get communication property value with improved type handling
+  const getCommunicationValue = (contact: BusinessContact, propName: string): string => {
+    if (!contact.communication) return '';
 
-    // Handle direct string value
-    if (typeof contact.communication[propName] === 'string') {
-      return contact.communication[propName];
+    const value = contact.communication[propName];
+
+    // If it's undefined, return empty string
+    if (value === undefined) return '';
+
+    // If it's a string, return it directly
+    if (typeof value === 'string') return value;
+
+    // If it's an object (possibly a multilanguage object), try to get value
+    if (typeof value === 'object' && value !== null) {
+      // Handle arrays explicitly
+      if (Array.isArray(value)) {
+        if (value.length === 0) return '';
+
+        // Check if it's a language item array
+        if (typeof value[0] === 'object' && value[0] !== null && 'text' in value[0]) {
+          return getFirstLangValue(value as LanguageItem[]);
+        }
+
+        // Return joined string for other arrays
+        return value.map(v => String(v)).join(', ');
+      }
+
+      // Handle object format
+      return getFirstLangValue(value as MultiLanguageValue);
     }
 
-    // Handle multi-language object
-    if (typeof contact.communication[propName] === 'object') {
-      return getFirstLangValue(contact.communication[propName]) || "";
-    }
-
-    return "";
+    // Fallback for any other type
+    return String(value);
   };
 
   // Helper function to render contact card
-  const renderContactCard = (contact: any, index: number) => {
+  const renderContactCard = (contact: BusinessContact, index: number): React.ReactNode => {
     // Get name parts
-    const firstName = getFirstLangValue(contact.firstName) || "";
-    const title = getFirstLangValue(contact.title) || "";
-    const academicTitle = getFirstLangValue(contact.academicTitle) || "";
+    const firstName = getFirstLangValue(contact.firstName) || '';
+    const title = getFirstLangValue(contact.title) || '';
+    const academicTitle = getFirstLangValue(contact.academicTitle) || '';
 
     // Format full name
-    const fullName = [
-      academicTitle,
-      title,
-      firstName
-    ].filter(Boolean).join(" ");
+    const fullName = [academicTitle, title, firstName].filter(Boolean).join(' ');
 
     // Generate initials from name for avatar
-    const initials = fullName.split(' ')
-      .map(part => part.charAt(0))
+    const initials = fullName
+      .split(' ')
+      .map((part) => part.charAt(0))
       .join('')
       .substring(0, 2)
       .toUpperCase();
 
     // Get contact details
-    const email = getCommunicationValue(contact, "email");
-    const phone = getCommunicationValue(contact, "phone");
-    const language = contact.communication?.language || "";
-    const companyName = getFirstLangValue(contact.company) || "";
-    const department = getFirstLangValue(contact.department) || "";
+    const email = getCommunicationValue(contact, 'email');
+    const phone = getCommunicationValue(contact, 'phone');
+    const language = contact.communication?.language || '';
+    const companyName = getFirstLangValue(contact.company) || '';
+    const department = getFirstLangValue(contact.department) || '';
 
     // Format address
     const formattedAddress = formatAddress(contact.address);
 
     // Determine avatar bg color based on role
-    let avatarColor = "blue";
-    if (contact.role?.toLowerCase().includes('sales')) avatarColor = "green";
-    if (contact.role?.toLowerCase().includes('support')) avatarColor = "purple";
-    if (contact.role?.toLowerCase().includes('manager')) avatarColor = "orange";
+    let avatarColor = 'blue';
+    if (contact.role?.toLowerCase().includes('sales')) avatarColor = 'green';
+    if (contact.role?.toLowerCase().includes('support')) avatarColor = 'purple';
+    if (contact.role?.toLowerCase().includes('manager')) avatarColor = 'orange';
 
     return (
-      <Card key={index} variant="outline" bg={cardBg} overflow="hidden">
+      <Card key={index} variant='outline' bg={cardBg} overflow='hidden'>
         {/* Contact Header */}
         <Box p={4} bg={headerBg}>
           <HStack spacing={3}>
-            <Avatar size="md" name={fullName} bg={`${avatarColor}.500`}>
+            <Avatar size='md' name={fullName} bg={`${avatarColor}.500`}>
               {initials}
             </Avatar>
             <Box>
-              <Heading size="sm">{fullName || "Contact Person"}</Heading>
+              <Heading size='sm'>{fullName || 'Contact Person'}</Heading>
               {contact.role && (
-                <Text fontSize="sm" color={labelColor}>{contact.role}</Text>
+                <Text fontSize='sm' color={labelColor}>
+                  {contact.role}
+                </Text>
               )}
             </Box>
             <Spacer />
             {language && (
-              <Tooltip label="Preferred Language">
-                <Tag colorScheme="blue" size="sm">
+              <Tooltip label='Preferred Language'>
+                <Tag colorScheme='blue' size='sm'>
                   <Icon as={MdLanguage} mr={1} />
                   {language}
                 </Tag>
@@ -183,19 +273,19 @@ const BusinessSection: React.FC<BusinessSectionProps> = ({
         </Box>
 
         <CardBody>
-          <VStack spacing={3} align="start">
+          <VStack spacing={3} align='start'>
             {/* Organization */}
             {companyName && (
               <HStack>
-                <Icon as={MdBusiness} color="blue.500" />
-                <Text fontWeight="medium">{companyName}</Text>
+                <Icon as={MdBusiness} color='blue.500' />
+                <Text fontWeight='medium'>{companyName}</Text>
               </HStack>
             )}
 
             {/* Department */}
             {department && (
               <HStack>
-                <Icon as={MdApartment} color="purple.500" />
+                <Icon as={MdApartment} color='purple.500' />
                 <Text>{department}</Text>
               </HStack>
             )}
@@ -203,8 +293,8 @@ const BusinessSection: React.FC<BusinessSectionProps> = ({
             {/* Email with mailto link */}
             {email && (
               <HStack>
-                <Icon as={MdEmail} color="green.500" />
-                <Link href={`mailto:${email}`} color="blue.500">
+                <Icon as={MdEmail} color='green.500' />
+                <Link href={`mailto:${email}`} color='blue.500'>
                   {email}
                 </Link>
               </HStack>
@@ -213,8 +303,8 @@ const BusinessSection: React.FC<BusinessSectionProps> = ({
             {/* Phone with tel link */}
             {phone && (
               <HStack>
-                <Icon as={MdPhone} color="blue.500" />
-                <Link href={`tel:${phone}`} color="blue.500">
+                <Icon as={MdPhone} color='blue.500' />
+                <Link href={`tel:${phone}`} color='blue.500'>
                   {phone}
                 </Link>
               </HStack>
@@ -222,8 +312,8 @@ const BusinessSection: React.FC<BusinessSectionProps> = ({
 
             {/* Address */}
             {formattedAddress && (
-              <HStack alignItems="flex-start">
-                <Icon as={MdLocationOn} color="red.500" mt={1} />
+              <HStack alignItems='flex-start'>
+                <Icon as={MdLocationOn} color='red.500' mt={1} />
                 <Text>{formattedAddress}</Text>
               </HStack>
             )}
@@ -231,8 +321,8 @@ const BusinessSection: React.FC<BusinessSectionProps> = ({
             {/* Website */}
             {contact.website && (
               <HStack>
-                <Icon as={MdLink} color="purple.500" />
-                <Link href={contact.website} isExternal color="blue.500">
+                <Icon as={MdLink} color='purple.500' />
+                <Link href={contact.website} isExternal color='blue.500'>
                   {contact.website.replace(/^https?:\/\//, '')}
                 </Link>
               </HStack>
@@ -240,8 +330,8 @@ const BusinessSection: React.FC<BusinessSectionProps> = ({
 
             {/* Description */}
             {contact.description && (
-              <Box pt={2} borderTopWidth="1px" borderColor={borderColor} width="100%">
-                <Text fontSize="sm">{getFirstLangValue(contact.description)}</Text>
+              <Box pt={2} borderTopWidth='1px' borderColor={borderColor} width='100%'>
+                <Text fontSize='sm'>{getFirstLangValue(contact.description)}</Text>
               </Box>
             )}
           </VStack>
@@ -249,28 +339,28 @@ const BusinessSection: React.FC<BusinessSectionProps> = ({
 
         {/* Actions */}
         {(email || phone) && (
-          <Box p={3} borderTopWidth="1px" borderColor={borderColor}>
+          <Box p={3} borderTopWidth='1px' borderColor={borderColor}>
             <HStack>
               {email && (
                 <Button
-                  size="sm"
+                  size='sm'
                   leftIcon={<Icon as={MdEmail} />}
-                  onClick={() => window.location.href = `mailto:${email}`}
-                  variant="outline"
-                  colorScheme="blue"
-                  flex="1"
+                  onClick={() => (window.location.href = `mailto:${email}`)}
+                  variant='outline'
+                  colorScheme='blue'
+                  flex='1'
                 >
                   Email
                 </Button>
               )}
               {phone && (
                 <Button
-                  size="sm"
+                  size='sm'
                   leftIcon={<Icon as={MdPhone} />}
-                  onClick={() => window.location.href = `tel:${phone}`}
-                  variant="outline"
-                  colorScheme="green"
-                  flex="1"
+                  onClick={() => (window.location.href = `tel:${phone}`)}
+                  variant='outline'
+                  colorScheme='green'
+                  flex='1'
                 >
                   Call
                 </Button>
@@ -283,19 +373,17 @@ const BusinessSection: React.FC<BusinessSectionProps> = ({
   };
 
   // Helper function to render partner card
-  const renderPartnerCard = (partner: any, index: number) => {
+  const renderPartnerCard = (partner: BusinessPartner, index: number): React.ReactNode => {
     return (
-      <Card key={index} variant="outline" bg={cardBg}>
+      <Card key={index} variant='outline' bg={cardBg}>
         <CardBody>
-          <VStack spacing={2} align="start">
+          <VStack spacing={2} align='start'>
             {/* Partner Name */}
-            <Heading size="sm">
-              {renderMultiLangValue(partner.name) || "Business Partner"}
-            </Heading>
+            <Heading size='sm'>{renderMultiLangValue(partner.name) || 'Business Partner'}</Heading>
 
             {/* Partner Type */}
             {partner.type && (
-              <Badge colorScheme="blue" mb={2}>
+              <Badge colorScheme='blue' mb={2}>
                 {partner.type}
               </Badge>
             )}
@@ -303,8 +391,8 @@ const BusinessSection: React.FC<BusinessSectionProps> = ({
             {/* Partner Website */}
             {partner.website && (
               <HStack>
-                <Icon as={MdLink} color="purple.500" />
-                <Link href={partner.website} isExternal color="blue.500">
+                <Icon as={MdLink} color='purple.500' />
+                <Link href={partner.website} isExternal color='blue.500'>
                   {partner.website.replace(/^https?:\/\//, '')}
                 </Link>
               </HStack>
@@ -312,8 +400,8 @@ const BusinessSection: React.FC<BusinessSectionProps> = ({
 
             {/* Partner Description */}
             {partner.description && (
-              <Box pt={2} mt={1} borderTopWidth="1px" borderColor={borderColor} width="100%">
-                <Text fontSize="sm">{getFirstLangValue(partner.description)}</Text>
+              <Box pt={2} mt={1} borderTopWidth='1px' borderColor={borderColor} width='100%'>
+                <Text fontSize='sm'>{getFirstLangValue(partner.description)}</Text>
               </Box>
             )}
           </VStack>
@@ -327,60 +415,85 @@ const BusinessSection: React.FC<BusinessSectionProps> = ({
 
   if (!hasBusinessData) {
     return (
-      <Box p={5} shadow="md" borderRadius="lg" bg={cardBg}>
+      <Box p={5} shadow='md' borderRadius='lg' bg={cardBg}>
         <Text color={labelColor}>No business information available.</Text>
       </Box>
     );
   }
 
   return (
-    <VStack spacing={6} align="stretch">
+    <VStack spacing={6} align='stretch'>
       {/* Contacts Section */}
       {contacts.length > 0 && (
-        <Box p={5} shadow="md" borderWidth="1px" borderColor={borderColor} borderRadius="lg" bg={cardBg}>
-          <HStack mb={4} spacing={2} pb={2} borderBottom="1px solid" borderColor={borderColor}>
-            <Icon as={MdContacts} color="blue.500" />
-            <Heading size="md">Business Contacts</Heading>
+        <Box
+          p={5}
+          shadow='md'
+          borderWidth='1px'
+          borderColor={borderColor}
+          borderRadius='lg'
+          bg={cardBg}
+        >
+          <HStack mb={4} spacing={2} pb={2} borderBottom='1px solid' borderColor={borderColor}>
+            <Icon as={MdContacts} color='blue.500' />
+            <Heading size='md'>Business Contacts</Heading>
           </HStack>
 
           <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} spacing={4}>
-            {contacts.map((contact, index) => renderContactCard(contact, index))}
+            {contacts.map((contact: BusinessContact, index: number) =>
+              renderContactCard(contact, index)
+            )}
           </SimpleGrid>
         </Box>
       )}
 
       {/* Partners Section */}
       {partners.length > 0 && (
-        <Box p={5} shadow="md" borderWidth="1px" borderColor={borderColor} borderRadius="lg" bg={cardBg}>
-          <HStack mb={4} spacing={2} pb={2} borderBottom="1px solid" borderColor={borderColor}>
-            <Icon as={MdBusiness} color="purple.500" />
-            <Heading size="md">Business Partners</Heading>
+        <Box
+          p={5}
+          shadow='md'
+          borderWidth='1px'
+          borderColor={borderColor}
+          borderRadius='lg'
+          bg={cardBg}
+        >
+          <HStack mb={4} spacing={2} pb={2} borderBottom='1px solid' borderColor={borderColor}>
+            <Icon as={MdBusiness} color='purple.500' />
+            <Heading size='md'>Business Partners</Heading>
           </HStack>
 
           <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} spacing={4}>
-            {partners.map((partner, index) => renderPartnerCard(partner, index))}
+            {partners.map((partner: BusinessPartner, index: number) =>
+              renderPartnerCard(partner, index)
+            )}
           </SimpleGrid>
         </Box>
       )}
 
       {/* Relationships Section */}
       {relationships.length > 0 && (
-        <Box p={5} shadow="md" borderWidth="1px" borderColor={borderColor} borderRadius="lg" bg={cardBg}>
-          <HStack mb={4} spacing={2} pb={2} borderBottom="1px solid" borderColor={borderColor}>
-            <Icon as={MdInfo} color="green.500" />
-            <Heading size="md">Business Relationships</Heading>
+        <Box
+          p={5}
+          shadow='md'
+          borderWidth='1px'
+          borderColor={borderColor}
+          borderRadius='lg'
+          bg={cardBg}
+        >
+          <HStack mb={4} spacing={2} pb={2} borderBottom='1px solid' borderColor={borderColor}>
+            <Icon as={MdInfo} color='green.500' />
+            <Heading size='md'>Business Relationships</Heading>
           </HStack>
 
-          <VStack spacing={3} align="stretch">
-            {relationships.map((relationship, index) => (
-              <Box key={index} p={4} borderWidth="1px" borderColor={borderColor} borderRadius="md">
+          <VStack spacing={3} align='stretch'>
+            {relationships.map((relationship: BusinessRelationship, index: number) => (
+              <Box key={index} p={4} borderWidth='1px' borderColor={borderColor} borderRadius='md'>
                 <HStack mb={2}>
-                  <Badge colorScheme="green">{relationship.type || "Relationship"}</Badge>
-                  <Text fontWeight="medium">{getFirstLangValue(relationship.name)}</Text>
+                  <Badge colorScheme='green'>{relationship.type || 'Relationship'}</Badge>
+                  <Text fontWeight='medium'>{getFirstLangValue(relationship.name)}</Text>
                 </HStack>
 
                 {relationship.description && (
-                  <Text fontSize="sm" color={labelColor}>
+                  <Text fontSize='sm' color={labelColor}>
                     {getFirstLangValue(relationship.description)}
                   </Text>
                 )}
@@ -391,9 +504,7 @@ const BusinessSection: React.FC<BusinessSectionProps> = ({
       )}
 
       {/* Developer Mode - Additional Data */}
-      {developerMode && additionalData && (
-        <AdditionalDataSection additionalData={additionalData} />
-      )}
+      {developerMode && additionalData && <AdditionalDataSection additionalData={additionalData} />}
     </VStack>
   );
 };

@@ -1,21 +1,82 @@
+import React from 'react';
 import {
-  Box, Heading, Text, VStack, HStack, Icon, useColorModeValue,
-  SimpleGrid, Badge, Table, Tbody, Tr, Td, Th, TableContainer, Image,
-  Flex, Divider, Link, Code, Button, Tooltip, Accordion, AccordionButton,
-  AccordionIcon, AccordionItem, AccordionPanel, Tag, Spacer
-} from "@chakra-ui/react";
+  Box,
+  Heading,
+  Text,
+  VStack,
+  HStack,
+  Icon,
+  useColorModeValue,
+  SimpleGrid,
+  Badge,
+  Image,
+  Flex,
+  Divider,
+  Link,
+  Code,
+  Accordion,
+  AccordionButton,
+  AccordionIcon,
+  AccordionItem,
+  AccordionPanel,
+  Tag,
+  Spacer,
+} from '@chakra-ui/react';
 import {
-  MdSettings, MdBadge, MdInfo, MdDescription, MdLanguage,
-  MdFilePresent, MdOpenInNew, MdOutlineInsertDriveFile, MdLabel
-} from "react-icons/md";
-import { DPPSection } from "../../../types/dpp";
-import { getFirstLangValue, formatDate, getNestedValue, isURL } from "../../../utils/dpp";
-import DynamicFieldsRenderer from "../renderers/DynamicFieldsRenderer";
-import AdditionalDataSection from "../AdditionalDataSection";
-import FileRenderer from "../renderers/FileRenderer";
+  MdSettings,
+  MdBadge,
+  MdInfo,
+  MdDescription,
+  MdFilePresent,
+  MdOpenInNew,
+  MdOutlineInsertDriveFile,
+  MdLabel,
+} from 'react-icons/md';
+import { DPPSection } from '../../../types/dpp';
+import { getFirstLangValue, getNestedValue, isURL } from '../../../utils/dpp';
+import DynamicFieldsRenderer from '../renderers/DynamicFieldsRenderer';
+import AdditionalDataSection from '../AdditionalDataSection';
+
+// Define interfaces for technical section data structure
+interface PropertyValue {
+  value?: any;
+  contentType?: string;
+  valueType?: string;
+  modelType?: string;
+  idShort?: string;
+  description?: string | Record<string, string>;
+  semanticId?: {
+    keys?: Array<{ type: string; value: string }>;
+    [key: string]: any;
+  };
+  [key: string]: any;
+}
+
+interface TechnicalSectionData {
+  summary?: {
+    productName?: string | Record<string, string>;
+    manufacturer?: string;
+    articleNumber?: string;
+    orderCode?: string;
+    productImage?: string;
+    manufacturerLogo?: string;
+    [key: string]: any;
+  };
+  generalInformation?: Record<string, PropertyValue>;
+  technicalProperties?: Record<string, PropertyValue>;
+  classifications?: {
+    idShort?: string;
+    description?: string | Record<string, string>;
+    elements?: Record<string, PropertyValue>;
+    [key: string]: any;
+  };
+  furtherInformation?: Record<string, PropertyValue>;
+  additionalData?: Record<string, any>;
+  [key: string]: any;
+}
 
 interface TechnicalSectionProps {
-  section: DPPSection;
+  section: DPPSection & { data: { data?: TechnicalSectionData } };
   developerMode: boolean;
   setSelectedImage?: (url: string) => void;
   setSelectedPdf?: (url: string) => void;
@@ -27,18 +88,22 @@ const TechnicalSection: React.FC<TechnicalSectionProps> = ({
   developerMode,
   setSelectedImage,
   setSelectedPdf,
-  setSelectedDocument
+  setSelectedDocument,
 }) => {
   // Make sure we have data to work with
   if (!section || !section.data) {
-    console.error("TechnicalSection: No section or section.data available");
-    return <Box p={4}><Text>No technical data available</Text></Box>;
+    console.error('TechnicalSection: No section or section.data available');
+    return (
+      <Box p={4}>
+        <Text>No technical data available</Text>
+      </Box>
+    );
   }
 
   // Extract the data correctly
-  const data = section.data.data || {};
+  const data = section.data.data || ({} as TechnicalSectionData);
 
-  // Extract top-level sections
+  // Extract top-level sections - removing unused variables
   const {
     summary = {},
     generalInformation = {},
@@ -46,41 +111,38 @@ const TechnicalSection: React.FC<TechnicalSectionProps> = ({
     classifications = {},
     furtherInformation = {},
     additionalData = null,
-    ...otherCollections
   } = data || {};
 
   // UI theme variables
-  const cardBg = useColorModeValue("white", "gray.800");
-  const borderColor = useColorModeValue("gray.200", "gray.600");
-  const headerBg = useColorModeValue("gray.50", "gray.700");
-  const labelColor = useColorModeValue("gray.600", "gray.400");
-  const fileBg = useColorModeValue("blue.50", "blue.900");
-  const descriptionBg = useColorModeValue("gray.50", "gray.700");
+  const cardBg = useColorModeValue('white', 'gray.800');
+  const borderColor = useColorModeValue('gray.200', 'gray.600');
+  const headerBg = useColorModeValue('gray.50', 'gray.700');
+  const labelColor = useColorModeValue('gray.600', 'gray.400');
+  const fileBg = useColorModeValue('blue.50', 'blue.900');
+  const descriptionBg = useColorModeValue('gray.50', 'gray.700');
 
   // Get product image URL from either summary or general information
-  const productImageUrl = summary.productImage ||
-                    getNestedValue(generalInformation, "ProductImage.value");
-
-  // Get manufacturer logo URL from either summary or general information
-  const manufacturerLogoUrl = summary.manufacturerLogo ||
-                        getNestedValue(generalInformation, "ManufacturerLogo.value");
+  const productImageUrl =
+    summary.productImage || getNestedValue(generalInformation, 'ProductImage.value');
 
   // Helper function to render multilanguage values
   const renderMultiLangValue = (value: any) => {
     if (!value) return null;
 
     // If it's not an object or has no language keys, render directly
-    if (typeof value !== 'object' || !value.en && !value.de) {
-      return <Text>{value}</Text>;
+    if (typeof value !== 'object' || (!value.en && !value.de)) {
+      return <Text>{String(value)}</Text>;
     }
 
     // Render multi-language
     return (
-      <VStack align="start" spacing={1}>
+      <VStack align='start' spacing={1}>
         {Object.entries(value).map(([lang, text]) => (
           <HStack key={lang}>
-            <Tag size="sm" colorScheme="blue" variant="subtle">{lang}</Tag>
-            <Text>{text}</Text>
+            <Tag size='sm' colorScheme='blue' variant='subtle'>
+              {lang}
+            </Tag>
+            <Text>{String(text)}</Text>
           </HStack>
         ))}
       </VStack>
@@ -98,7 +160,7 @@ const TechnicalSection: React.FC<TechnicalSectionProps> = ({
     } else if (setSelectedDocument) {
       setSelectedDocument({
         file: url,
-        title: "Document"
+        title: 'Document',
       });
     }
   };
@@ -111,8 +173,8 @@ const TechnicalSection: React.FC<TechnicalSectionProps> = ({
       <Box
         p={3}
         bg={fileBg}
-        borderRadius="md"
-        cursor="pointer"
+        borderRadius='md'
+        cursor='pointer'
         onClick={() => handleFileOrImageClick(url, contentType)}
         _hover={{ opacity: 0.8 }}
       >
@@ -120,21 +182,23 @@ const TechnicalSection: React.FC<TechnicalSectionProps> = ({
           <Icon
             as={contentType?.startsWith('image/') ? MdFilePresent : MdOutlineInsertDriveFile}
             boxSize={5}
-            color={contentType?.startsWith('image/') ? "green.500" : "blue.500"}
+            color={contentType?.startsWith('image/') ? 'green.500' : 'blue.500'}
           />
-          <Text fontWeight="medium" isTruncated maxW="300px">{url.split('/').pop() || url}</Text>
-          <Icon as={MdOpenInNew} color="blue.500" />
+          <Text fontWeight='medium' isTruncated maxW='300px'>
+            {url.split('/').pop() || url}
+          </Text>
+          <Icon as={MdOpenInNew} color='blue.500' />
         </HStack>
 
         {contentType?.startsWith('image/') && (
           <Box mt={2}>
             <Image
               src={url}
-              alt="Preview"
-              height="100px"
-              objectFit="contain"
-              mx="auto"
-              borderRadius="md"
+              alt='Preview'
+              height='100px'
+              objectFit='contain'
+              mx='auto'
+              borderRadius='md'
             />
           </Box>
         )}
@@ -145,21 +209,24 @@ const TechnicalSection: React.FC<TechnicalSectionProps> = ({
   // Enhanced property value renderer that handles complex objects with images, files, etc.
   const renderPropertyValue = (value: any) => {
     // Handle null/undefined
-    if (value === null || value === undefined) return <Text color="gray.400">—</Text>;
+    if (value === null || value === undefined) return <Text color='gray.400'>—</Text>;
 
     // Add consistent value label
     return (
-      <VStack align="start" spacing={1} width="100%">
-        <Text fontSize="sm" color={labelColor} mb={1}>Value</Text>
+      <VStack align='start' spacing={1} width='100%'>
+        <Text fontSize='sm' color={labelColor} mb={1}>
+          Value
+        </Text>
         {renderPropertyValueContent(value)}
 
         {/* Show semantic ID in developer mode */}
-        {developerMode && value.semanticId && (
+        {developerMode && value?.semanticId && (
           <Box mt={2}>
-            <Text fontSize="sm" color={labelColor} mb={1}>Semantic ID</Text>
-            <Code fontSize="sm" p={1} borderRadius="md">
-              {value.semanticId.keys?.[0]?.value ||
-               JSON.stringify(value.semanticId)}
+            <Text fontSize='sm' color={labelColor} mb={1}>
+              Semantic ID
+            </Text>
+            <Code fontSize='sm' p={1} borderRadius='md'>
+              {value.semanticId.keys?.[0]?.value || JSON.stringify(value.semanticId)}
             </Code>
           </Box>
         )}
@@ -174,7 +241,7 @@ const TechnicalSection: React.FC<TechnicalSectionProps> = ({
       // Handle URLs specially
       if (typeof value === 'string' && isURL(value)) {
         return (
-          <Link href={value} isExternal color="blue.500">
+          <Link href={value} isExternal color='blue.500'>
             <HStack>
               <Text>{value}</Text>
               <Icon as={MdOpenInNew} />
@@ -182,8 +249,11 @@ const TechnicalSection: React.FC<TechnicalSectionProps> = ({
           </Link>
         );
       }
-      return <Text fontWeight="medium">{value}</Text>;
+      return <Text fontWeight='medium'>{String(value)}</Text>;
     }
+
+    // Handle null
+    if (value === null) return <Text color='gray.400'>—</Text>;
 
     // Handle multi-language properties
     if (value.en || value.de) {
@@ -191,7 +261,10 @@ const TechnicalSection: React.FC<TechnicalSectionProps> = ({
     }
 
     // Handle files
-    if (value.value && (value.contentType || (typeof value.value === 'string' && isURL(value.value)))) {
+    if (
+      value.value &&
+      (value.contentType || (typeof value.value === 'string' && isURL(value.value)))
+    ) {
       return renderFileLink(value.value, value.contentType);
     }
 
@@ -208,19 +281,19 @@ const TechnicalSection: React.FC<TechnicalSectionProps> = ({
   const renderDescription = (description: any) => {
     if (!description) return null;
 
-    let descText = "";
-    if (typeof description === "string") {
+    let descText = '';
+    if (typeof description === 'string') {
       descText = description;
-    } else if (typeof description === "object") {
+    } else if (typeof description === 'object') {
       descText = getFirstLangValue(description);
     }
 
     if (!descText) return null;
 
     return (
-      <Box mt={1} p={2} bg={descriptionBg} borderRadius="md" fontSize="sm">
-        <HStack align="flex-start" spacing={2}>
-          <Icon as={MdInfo} color="blue.500" mt={0.5} />
+      <Box mt={1} p={2} bg={descriptionBg} borderRadius='md' fontSize='sm'>
+        <HStack align='flex-start' spacing={2}>
+          <Icon as={MdInfo} color='blue.500' mt={0.5} />
           <Text>{descText}</Text>
         </HStack>
       </Box>
@@ -228,18 +301,18 @@ const TechnicalSection: React.FC<TechnicalSectionProps> = ({
   };
 
   // Helper to render property metadata (like model type, description)
-  const renderPropertyMetadata = (property: any) => {
+  const renderPropertyMetadata = (property: PropertyValue | null | undefined) => {
     if (!property) return null;
 
     return (
-      <VStack align="start" spacing={1} mt={1}>
+      <VStack align='start' spacing={1} mt={1}>
         {property.modelType && (
           <HStack>
-            <Badge size="sm" colorScheme="purple" variant="subtle">
+            <Badge size='sm' colorScheme='purple' variant='subtle'>
               {property.modelType}
             </Badge>
             {property.valueType && (
-              <Badge size="sm" colorScheme="blue" variant="outline">
+              <Badge size='sm' colorScheme='blue' variant='outline'>
                 {property.valueType}
               </Badge>
             )}
@@ -247,7 +320,7 @@ const TechnicalSection: React.FC<TechnicalSectionProps> = ({
         )}
 
         {developerMode && property.idShort && (
-          <Text fontSize="xs" color="gray.500">
+          <Text fontSize='xs' color='gray.500'>
             ID: {property.idShort}
           </Text>
         )}
@@ -259,33 +332,37 @@ const TechnicalSection: React.FC<TechnicalSectionProps> = ({
   const hasData = Object.keys(data).length > 0;
   if (!hasData) {
     return (
-      <Box p={5} shadow="md" borderRadius="md" bg={cardBg}>
-        <Heading size="md" mb={4}>Technical Data</Heading>
+      <Box p={5} shadow='md' borderRadius='md' bg={cardBg}>
+        <Heading size='md' mb={4}>
+          Technical Data
+        </Heading>
         <Text>No technical data available for this product.</Text>
       </Box>
     );
   }
 
   // Update the card display templates for technical properties
-  const renderPropertyCard = (key: string, property: any, formattedKey: string) => {
+  const renderPropertyCard = (key: string, property: PropertyValue, formattedKey: string) => {
     return (
       <Box
         key={key}
-        borderWidth="1px"
+        borderWidth='1px'
         borderColor={borderColor}
-        borderRadius="md"
-        overflow="hidden"
+        borderRadius='md'
+        overflow='hidden'
       >
         <Box p={3} bg={headerBg}>
           <HStack>
-            <Text fontWeight="medium">{formattedKey}</Text>
+            <Text fontWeight='medium'>{formattedKey}</Text>
             <Spacer />
             {renderPropertyMetadata(property)}
           </HStack>
 
           {/* Show ID info in developer mode */}
           {developerMode && property.idShort && (
-            <Text fontSize="xs" mt={1} color="gray.500">ID: {property.idShort}</Text>
+            <Text fontSize='xs' mt={1} color='gray.500'>
+              ID: {property.idShort}
+            </Text>
           )}
         </Box>
 
@@ -296,12 +373,16 @@ const TechnicalSection: React.FC<TechnicalSectionProps> = ({
 
         {/* Show full semantic info in developer mode */}
         {developerMode && property.semanticId && (
-          <Box p={3} bg={useColorModeValue("gray.100", "gray.700")} borderTopWidth="1px" borderColor={borderColor}>
-            <Text fontSize="xs" fontWeight="medium" mb={1}>Semantic Information</Text>
-            <DynamicFieldsRenderer
-              data={property.semanticId}
-              developerMode={true}
-            />
+          <Box
+            p={3}
+            bg={useColorModeValue('gray.100', 'gray.700')}
+            borderTopWidth='1px'
+            borderColor={borderColor}
+          >
+            <Text fontSize='xs' fontWeight='medium' mb={1}>
+              Semantic Information
+            </Text>
+            <DynamicFieldsRenderer data={property.semanticId} developerMode={true} />
           </Box>
         )}
       </Box>
@@ -309,43 +390,51 @@ const TechnicalSection: React.FC<TechnicalSectionProps> = ({
   };
 
   return (
-    <VStack spacing={5} align="stretch">
+    <VStack spacing={5} align='stretch'>
       {/* Product Overview Section */}
-      <Box p={6} bg={cardBg} shadow="sm" borderRadius="lg">
-        <HStack mb={4} spacing={2} pb={2} borderBottom="1px solid" borderColor={borderColor}>
-          <Icon as={MdLabel} color="teal.500" />
-          <Heading size="md">Product Overview</Heading>
+      <Box p={6} bg={cardBg} shadow='sm' borderRadius='lg'>
+        <HStack mb={4} spacing={2} pb={2} borderBottom='1px solid' borderColor={borderColor}>
+          <Icon as={MdLabel} color='teal.500' />
+          <Heading size='md'>Product Overview</Heading>
         </HStack>
 
-        <Flex gap={6} flexDirection={{ base: "column", md: "row" }}>
+        <Flex gap={6} flexDirection={{ base: 'column', md: 'row' }}>
           {/* Left: Product Details */}
-          <Box flex="1">
+          <Box flex='1'>
             <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
               {summary.productName && (
                 <Box>
-                  <Text fontSize="sm" color={labelColor} mb={1}>Product Name</Text>
+                  <Text fontSize='sm' color={labelColor} mb={1}>
+                    Product Name
+                  </Text>
                   {renderMultiLangValue(summary.productName)}
                 </Box>
               )}
 
               {summary.manufacturer && (
                 <Box>
-                  <Text fontSize="sm" color={labelColor} mb={1}>Manufacturer</Text>
-                  <Text fontWeight="medium">{summary.manufacturer}</Text>
+                  <Text fontSize='sm' color={labelColor} mb={1}>
+                    Manufacturer
+                  </Text>
+                  <Text fontWeight='medium'>{summary.manufacturer}</Text>
                 </Box>
               )}
 
               {summary.articleNumber && (
                 <Box>
-                  <Text fontSize="sm" color={labelColor} mb={1}>Article Number</Text>
-                  <Text fontWeight="medium">{summary.articleNumber}</Text>
+                  <Text fontSize='sm' color={labelColor} mb={1}>
+                    Article Number
+                  </Text>
+                  <Text fontWeight='medium'>{summary.articleNumber}</Text>
                 </Box>
               )}
 
               {summary.orderCode && (
                 <Box>
-                  <Text fontSize="sm" color={labelColor} mb={1}>Order Code</Text>
-                  <Text fontWeight="medium">{summary.orderCode}</Text>
+                  <Text fontSize='sm' color={labelColor} mb={1}>
+                    Order Code
+                  </Text>
+                  <Text fontWeight='medium'>{summary.orderCode}</Text>
                 </Box>
               )}
             </SimpleGrid>
@@ -354,22 +443,22 @@ const TechnicalSection: React.FC<TechnicalSectionProps> = ({
           {/* Right: Product Image */}
           {productImageUrl && (
             <Box
-              width={{ base: "100%", md: "250px" }}
+              width={{ base: '100%', md: '250px' }}
               p={4}
-              bg={useColorModeValue("gray.50", "gray.700")}
-              borderRadius="lg"
-              display="flex"
-              alignItems="center"
-              justifyContent="center"
+              bg={useColorModeValue('gray.50', 'gray.700')}
+              borderRadius='lg'
+              display='flex'
+              alignItems='center'
+              justifyContent='center'
             >
               <Image
                 src={productImageUrl}
-                alt="Product"
-                maxH="160px"
-                cursor="pointer"
+                alt='Product'
+                maxH='160px'
+                cursor='pointer'
                 onClick={() => setSelectedImage?.(productImageUrl)}
-                borderRadius="md"
-                objectFit="contain"
+                borderRadius='md'
+                objectFit='contain'
               />
             </Box>
           )}
@@ -378,23 +467,24 @@ const TechnicalSection: React.FC<TechnicalSectionProps> = ({
 
       {/* Technical Properties Section - Enhanced with descriptions */}
       {Object.keys(technicalProperties).length > 0 && (
-        <Box p={6} bg={cardBg} shadow="sm" borderRadius="lg">
-          <HStack mb={4} spacing={2} pb={2} borderBottom="1px solid" borderColor={borderColor}>
-            <Icon as={MdSettings} color="blue.500" />
-            <Heading size="md">Technical Properties</Heading>
+        <Box p={6} bg={cardBg} shadow='sm' borderRadius='lg'>
+          <HStack mb={4} spacing={2} pb={2} borderBottom='1px solid' borderColor={borderColor}>
+            <Icon as={MdSettings} color='blue.500' />
+            <Heading size='md'>Technical Properties</Heading>
           </HStack>
 
-          <VStack spacing={4} align="stretch">
+          <VStack spacing={4} align='stretch'>
             {Object.entries(technicalProperties).map(([key, property]) => {
               // Format the key for display
               const formattedKey = key
                 .replace(/ID__/g, '')
                 .replace(/__/g, '')
                 .replace(/_/g, ' ')
-                .split(/(?=[A-Z])/).join(' ')
+                .split(/(?=[A-Z])/)
+                .join(' ')
                 .trim();
 
-              return renderPropertyCard(key, property, formattedKey);
+              return renderPropertyCard(key, property as PropertyValue, formattedKey);
             })}
           </VStack>
         </Box>
@@ -402,12 +492,14 @@ const TechnicalSection: React.FC<TechnicalSectionProps> = ({
 
       {/* Classification Section - Enhanced with hierarchy */}
       {classifications && Object.keys(classifications).length > 0 && (
-        <Box p={6} bg={cardBg} shadow="sm" borderRadius="lg">
-          <HStack mb={4} spacing={2} pb={2} borderBottom="1px solid" borderColor={borderColor}>
-            <Icon as={MdBadge} color="purple.500" />
-            <Heading size="md">Classification</Heading>
+        <Box p={6} bg={cardBg} shadow='sm' borderRadius='lg'>
+          <HStack mb={4} spacing={2} pb={2} borderBottom='1px solid' borderColor={borderColor}>
+            <Icon as={MdBadge} color='purple.500' />
+            <Heading size='md'>Classification</Heading>
             {classifications.idShort && (
-              <Badge colorScheme="blue" variant="subtle">{classifications.idShort}</Badge>
+              <Badge colorScheme='blue' variant='subtle'>
+                {classifications.idShort}
+              </Badge>
             )}
           </HStack>
 
@@ -415,13 +507,17 @@ const TechnicalSection: React.FC<TechnicalSectionProps> = ({
           {classifications.description && renderDescription(classifications.description)}
 
           {/* Classification hierarchy */}
-          <VStack mt={4} spacing={4} align="stretch">
-            {classifications.elements && Object.entries(classifications.elements).map(([key, property]) => {
-              // Format classification properties for display
-              const formattedKey = key.split(/(?=[A-Z])/).join(' ').trim();
+          <VStack mt={4} spacing={4} align='stretch'>
+            {classifications.elements &&
+              Object.entries(classifications.elements).map(([key, property]) => {
+                // Format classification properties for display
+                const formattedKey = key
+                  .split(/(?=[A-Z])/)
+                  .join(' ')
+                  .trim();
 
-              return renderPropertyCard(key, property, formattedKey);
-            })}
+                return renderPropertyCard(key, property, formattedKey);
+              })}
           </VStack>
 
           {/* If no elements property is present, render the classification directly */}
@@ -435,15 +531,18 @@ const TechnicalSection: React.FC<TechnicalSectionProps> = ({
 
       {/* Further Information Section - Enhanced with descriptions */}
       {Object.keys(furtherInformation).length > 0 && (
-        <Box p={6} bg={cardBg} shadow="sm" borderRadius="lg">
-          <HStack mb={4} spacing={2} pb={2} borderBottom="1px solid" borderColor={borderColor}>
-            <Icon as={MdInfo} color="green.500" />
-            <Heading size="md">Additional Information</Heading>
+        <Box p={6} bg={cardBg} shadow='sm' borderRadius='lg'>
+          <HStack mb={4} spacing={2} pb={2} borderBottom='1px solid' borderColor={borderColor}>
+            <Icon as={MdInfo} color='green.500' />
+            <Heading size='md'>Additional Information</Heading>
           </HStack>
 
-          <VStack spacing={4} align="stretch">
+          <VStack spacing={4} align='stretch'>
             {Object.entries(furtherInformation).map(([key, property]) => {
-              const formattedKey = key.split(/(?=[A-Z])/).join(' ').trim();
+              const formattedKey = key
+                .split(/(?=[A-Z])/)
+                .join(' ')
+                .trim();
 
               return renderPropertyCard(key, property, formattedKey);
             })}
@@ -453,50 +552,56 @@ const TechnicalSection: React.FC<TechnicalSectionProps> = ({
 
       {/* General Information Section - Enhanced with descriptions and metadata */}
       {Object.keys(generalInformation).length > 0 && (
-        <Box p={6} bg={cardBg} shadow="sm" borderRadius="lg">
-          <HStack mb={4} spacing={2} pb={2} borderBottom="1px solid" borderColor={borderColor}>
-            <Icon as={MdDescription} color="orange.500" />
-            <Heading size="md">General Information</Heading>
+        <Box p={6} bg={cardBg} shadow='sm' borderRadius='lg'>
+          <HStack mb={4} spacing={2} pb={2} borderBottom='1px solid' borderColor={borderColor}>
+            <Icon as={MdDescription} color='orange.500' />
+            <Heading size='md'>General Information</Heading>
           </HStack>
 
           <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
             {Object.entries(generalInformation).map(([key, property]) => {
               // Skip image fields since we display them elsewhere
-              if ((key === 'ProductImage' || key === 'ManufacturerLogo') &&
-                  !developerMode) {
+              if ((key === 'ProductImage' || key === 'ManufacturerLogo') && !developerMode) {
                 return null;
               }
 
               // Format the key
-              const formattedKey = key.split(/(?=[A-Z])/).join(' ').trim();
+              const formattedKey = key
+                .split(/(?=[A-Z])/)
+                .join(' ')
+                .trim();
 
               return (
                 <Accordion key={key} allowToggle>
                   <AccordionItem
-                    border="1px"
+                    border='1px'
                     borderColor={borderColor}
-                    borderRadius="md"
-                    overflow="hidden"
+                    borderRadius='md'
+                    overflow='hidden'
                     mb={0}
                   >
                     <AccordionButton bg={headerBg} _hover={{ bg: headerBg }}>
-                      <Box flex="1" textAlign="left">
-                        <Text fontWeight="medium">{formattedKey}</Text>
+                      <Box flex='1' textAlign='left'>
+                        <Text fontWeight='medium'>{formattedKey}</Text>
                       </Box>
                       <AccordionIcon />
                     </AccordionButton>
                     <AccordionPanel pb={4}>
-                      <VStack align="start" spacing={3}>
+                      <VStack align='start' spacing={3}>
                         {/* Property value */}
-                        <Box width="100%">
-                          <Text fontSize="sm" color={labelColor} mb={1}>Value</Text>
+                        <Box width='100%'>
+                          <Text fontSize='sm' color={labelColor} mb={1}>
+                            Value
+                          </Text>
                           {renderPropertyValue(property)}
                         </Box>
 
                         {/* Property description */}
                         {property.description && (
-                          <Box width="100%">
-                            <Text fontSize="sm" color={labelColor} mb={1}>Description</Text>
+                          <Box width='100%'>
+                            <Text fontSize='sm' color={labelColor} mb={1}>
+                              Description
+                            </Text>
                             <Text>{getFirstLangValue(property.description)}</Text>
                           </Box>
                         )}
@@ -505,12 +610,14 @@ const TechnicalSection: React.FC<TechnicalSectionProps> = ({
                         {developerMode && (
                           <>
                             {property.modelType && (
-                              <Box width="100%">
-                                <Text fontSize="sm" color={labelColor} mb={1}>Type</Text>
+                              <Box width='100%'>
+                                <Text fontSize='sm' color={labelColor} mb={1}>
+                                  Type
+                                </Text>
                                 <HStack>
-                                  <Badge colorScheme="purple">{property.modelType}</Badge>
+                                  <Badge colorScheme='purple'>{property.modelType}</Badge>
                                   {property.valueType && (
-                                    <Badge colorScheme="blue" variant="outline">
+                                    <Badge colorScheme='blue' variant='outline'>
                                       {property.valueType}
                                     </Badge>
                                   )}
@@ -519,9 +626,11 @@ const TechnicalSection: React.FC<TechnicalSectionProps> = ({
                             )}
 
                             {property.idShort && (
-                              <Box width="100%">
-                                <Text fontSize="sm" color={labelColor} mb={1}>ID</Text>
-                                <Code fontSize="sm">{property.idShort}</Code>
+                              <Box width='100%'>
+                                <Text fontSize='sm' color={labelColor} mb={1}>
+                                  ID
+                                </Text>
+                                <Code fontSize='sm'>{property.idShort}</Code>
                               </Box>
                             )}
                           </>
@@ -539,27 +648,31 @@ const TechnicalSection: React.FC<TechnicalSectionProps> = ({
             <Divider mb={4} />
             <SimpleGrid columns={{ base: 1, md: 2 }} spacing={6}>
               {/* Product Image */}
-              {getNestedValue(generalInformation, "ProductImage.value") && (
+              {getNestedValue(generalInformation, 'ProductImage.value') && (
                 <Box
                   p={4}
-                  borderWidth="1px"
+                  borderWidth='1px'
                   borderColor={borderColor}
-                  borderRadius="md"
+                  borderRadius='md'
                   bg={descriptionBg}
                 >
                   <VStack spacing={3}>
-                    <Text fontWeight="medium">Product Image</Text>
+                    <Text fontWeight='medium'>Product Image</Text>
                     <Image
-                      src={getNestedValue(generalInformation, "ProductImage.value")}
-                      alt="Product"
-                      maxH="150px"
-                      objectFit="contain"
-                      cursor="pointer"
-                      onClick={() => setSelectedImage?.(getNestedValue(generalInformation, "ProductImage.value"))}
+                      src={getNestedValue(generalInformation, 'ProductImage.value')}
+                      alt='Product'
+                      maxH='150px'
+                      objectFit='contain'
+                      cursor='pointer'
+                      onClick={() =>
+                        setSelectedImage?.(getNestedValue(generalInformation, 'ProductImage.value'))
+                      }
                     />
-                    {getNestedValue(generalInformation, "ProductImage.description") && (
-                      <Text fontSize="sm" color={labelColor}>
-                        {getFirstLangValue(getNestedValue(generalInformation, "ProductImage.description"))}
+                    {getNestedValue(generalInformation, 'ProductImage.description') && (
+                      <Text fontSize='sm' color={labelColor}>
+                        {getFirstLangValue(
+                          getNestedValue(generalInformation, 'ProductImage.description')
+                        )}
                       </Text>
                     )}
                   </VStack>
@@ -567,27 +680,33 @@ const TechnicalSection: React.FC<TechnicalSectionProps> = ({
               )}
 
               {/* Manufacturer Logo */}
-              {getNestedValue(generalInformation, "ManufacturerLogo.value") && (
+              {getNestedValue(generalInformation, 'ManufacturerLogo.value') && (
                 <Box
                   p={4}
-                  borderWidth="1px"
+                  borderWidth='1px'
                   borderColor={borderColor}
-                  borderRadius="md"
+                  borderRadius='md'
                   bg={descriptionBg}
                 >
                   <VStack spacing={3}>
-                    <Text fontWeight="medium">Manufacturer Logo</Text>
+                    <Text fontWeight='medium'>Manufacturer Logo</Text>
                     <Image
-                      src={getNestedValue(generalInformation, "ManufacturerLogo.value")}
-                      alt="Manufacturer Logo"
-                      maxH="80px"
-                      objectFit="contain"
-                      cursor="pointer"
-                      onClick={() => setSelectedImage?.(getNestedValue(generalInformation, "ManufacturerLogo.value"))}
+                      src={getNestedValue(generalInformation, 'ManufacturerLogo.value')}
+                      alt='Manufacturer Logo'
+                      maxH='80px'
+                      objectFit='contain'
+                      cursor='pointer'
+                      onClick={() =>
+                        setSelectedImage?.(
+                          getNestedValue(generalInformation, 'ManufacturerLogo.value')
+                        )
+                      }
                     />
-                    {getNestedValue(generalInformation, "ManufacturerLogo.description") && (
-                      <Text fontSize="sm" color={labelColor}>
-                        {getFirstLangValue(getNestedValue(generalInformation, "ManufacturerLogo.description"))}
+                    {getNestedValue(generalInformation, 'ManufacturerLogo.description') && (
+                      <Text fontSize='sm' color={labelColor}>
+                        {getFirstLangValue(
+                          getNestedValue(generalInformation, 'ManufacturerLogo.description')
+                        )}
                       </Text>
                     )}
                   </VStack>
@@ -599,9 +718,7 @@ const TechnicalSection: React.FC<TechnicalSectionProps> = ({
       )}
 
       {/* Developer Mode - Additional Data */}
-      {developerMode && additionalData && (
-        <AdditionalDataSection additionalData={additionalData} />
-      )}
+      {developerMode && additionalData && <AdditionalDataSection additionalData={additionalData} />}
     </VStack>
   );
 };

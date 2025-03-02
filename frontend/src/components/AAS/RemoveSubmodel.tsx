@@ -31,9 +31,16 @@ import { useState, useRef } from "react";
 import { AasService } from "../../client";
 import useCustomToast from "../../hooks/useCustomToast";
 
+// Better type definition for submodels
+interface Submodel {
+  id: string;
+  idShort: string;
+  description?: Array<{ language: string; text: string }>;
+}
+
 interface RemoveSubmodelProps {
   aasId: string;
-  submodels: any[]; // Update this when you have the exact type
+  submodels: Submodel[];
 }
 
 export default function RemoveSubmodel({ aasId, submodels }: RemoveSubmodelProps) {
@@ -52,7 +59,11 @@ export default function RemoveSubmodel({ aasId, submodels }: RemoveSubmodelProps
         )
       ),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["aas", aasId] });
+      // Invalidate the correct query key for AAS details
+      queryClient.invalidateQueries({ queryKey: ["aasDetails", aasId] });
+      // Also invalidate the general AAS list query
+      queryClient.invalidateQueries({ queryKey: ["aas"] });
+
       showToast("Success!", "Submodels removed.", "success");
       setSelectedSubmodels([]); // Reset selection
       onClose();

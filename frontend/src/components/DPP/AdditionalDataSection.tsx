@@ -11,11 +11,11 @@ import {
   AccordionButton,
   AccordionPanel,
   AccordionIcon,
-  Code,
   Badge,
   useColorModeValue
 } from '@chakra-ui/react';
 import { MdCode } from 'react-icons/md';
+import DynamicFieldsRenderer from './renderers/DynamicFieldsRenderer';
 
 interface AdditionalDataSectionProps {
   additionalData: any;
@@ -53,7 +53,7 @@ const AdditionalDataSection: React.FC<AdditionalDataSectionProps> = ({ additiona
         </Box>
       )}
 
-      {/* Elements - More Complex Structure */}
+      {/* Elements - Using DynamicFieldsRenderer instead of raw JSON */}
       {Object.keys(elements).length > 0 && (
         <Box>
           <Heading size="sm" mb={2}>Elements</Heading>
@@ -71,10 +71,12 @@ const AdditionalDataSection: React.FC<AdditionalDataSectionProps> = ({ additiona
                   <AccordionIcon />
                 </AccordionButton>
                 <AccordionPanel pt={4}>
-                  <Box overflow="auto" maxH="300px">
-                    <Code p={2} borderRadius="md" display="block" whiteSpace="pre">
-                      {JSON.stringify(value, null, 2)}
-                    </Code>
+                  {/* Remove height constraint to allow full expansion */}
+                  <Box>
+                    <DynamicFieldsRenderer
+                      data={value}
+                      developerMode={true}
+                    />
                   </Box>
                 </AccordionPanel>
               </AccordionItem>
@@ -83,12 +85,13 @@ const AdditionalDataSection: React.FC<AdditionalDataSectionProps> = ({ additiona
         </Box>
       )}
 
-      {/* If no structured data, show raw JSON */}
+      {/* Full data renderer when no structured data is provided */}
       {Object.keys(metadata).length === 0 && Object.keys(elements).length === 0 && (
-        <Box overflow="auto" maxH="300px">
-          <Code p={2} borderRadius="md" display="block" whiteSpace="pre">
-            {JSON.stringify(additionalData, null, 2)}
-          </Code>
+        <Box>
+          <DynamicFieldsRenderer
+            data={additionalData}
+            developerMode={true}
+          />
         </Box>
       )}
     </Box>

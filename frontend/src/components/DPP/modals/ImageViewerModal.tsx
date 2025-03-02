@@ -7,7 +7,6 @@ import {
   ModalCloseButton,
   Image,
   Box,
-  Text,
   Button,
   HStack,
   Link,

@@ -2,40 +2,152 @@ import React from 'react';
 import {
   Box, VStack, HStack, Text, Icon, useColorModeValue,
   Badge, Card, CardBody, Heading, SimpleGrid, Divider,
-  Link, Tag, Flex, Image, Accordion, AccordionItem,
+  Link, Flex, Accordion, AccordionItem,
   AccordionButton, AccordionPanel, AccordionIcon,
-  TableContainer, Table, Tbody, Tr, Th, Td, Button,
-  AspectRatio, Tooltip, Stat, StatLabel, StatNumber, StatGroup
+  TableContainer, Table, Tbody, Tr, Th, Td, Button, Tooltip, Stat, StatLabel, StatNumber, StatGroup
 } from '@chakra-ui/react';
 import {
   MdLocationOn, MdPublic, MdRoom, MdMyLocation, MdPictureAsPdf,
   MdLocalShipping, MdMap, MdHistory, MdTimeline, MdOpenInNew,
-  MdOutlineLocationSearching, MdExplore, MdDocumentScanner, MdLink,
-  MdLanguage, MdOutlinePlace, MdTerrain, MdInfo
+  MdOutlineLocationSearching, MdExplore, MdDocumentScanner, MdLink, MdOutlinePlace, MdTerrain, MdInfo,
+  MdCode // Use this instead of MdDeveloperMode which doesn't exist
 } from 'react-icons/md';
 import { DPPSection } from '../../../types/dpp';
 import { getFirstLangValue } from '../../../utils/dpp';
 import AdditionalDataSection from '../AdditionalDataSection';
 import DynamicFieldsRenderer from '../renderers/DynamicFieldsRenderer';
 
+// Define interfaces for location data types
+interface Coordinates {
+  latitude?: number;
+  longitude?: number;
+  lat?: number;
+  lng?: number;
+  [key: string]: any;
+}
+
+interface AddressDetails {
+  street?: string;
+  line2?: string;
+  city?: string;
+  postCode?: string;
+  state?: string;
+  country?: string;
+  formattedAddress?: string;
+  mapUrl?: string;
+  staticMapUrl?: string | null;
+  addressLines?: string[];
+  remarks?: string;
+  additionalLink?: string;
+}
+
+interface LocationDocument {
+  file?: string;
+  url?: string;
+  title?: string;
+  [key: string]: any;
+}
+
+interface LocationData {
+  address?: any;
+  coordinates?: Coordinates;
+  description?: string | Record<string, string>;
+  status?: string;
+  notes?: string | Record<string, string>;
+  documents?: LocationDocument[];
+  properties?: Record<string, any>;
+  [key: string]: any;
+}
+
+interface CoordinateSystem {
+  properties?: {
+    name?: string;
+    id?: string;
+    type?: string;
+    elevationReference?: string;
+    seaLevelBaseHeight?: string;
+    [key: string]: any;
+  };
+  groundControlPoints?: Array<{
+    geographic?: Coordinates;
+    relative?: { x: number; y: number };
+    [key: string]: any;
+  }>;
+  [key: string]: any;
+}
+
+interface VisitedArea {
+  properties?: {
+    areaname?: string;
+    kindofarea?: string;
+    areaid?: string;
+    areadesciption?: string | string[] | Record<string, string>;
+    arealayout?: string;
+    [key: string]: any;
+  };
+  regionCoordinates?: Array<{ x: number; y: number; [key: string]: any }>;
+  [key: string]: any;
+}
+
+interface TrackingCapability {
+  displayName?: string | Record<string, string>;
+  value?: any;
+  description?: string | Record<string, string>;
+  [key: string]: any;
+}
+
+interface TrackingCapabilities {
+  localizable?: TrackingCapability;
+  sourceType?: TrackingCapability;
+  realTimeCapability?: TrackingCapability;
+  source?: TrackingCapability;
+  [key: string]: any;
+}
+
+interface TraceabilityRecord {
+  area?: any[];
+  location?: any[];
+  [key: string]: any;
+}
+
+interface Traceability {
+  displayName?: string | Record<string, string>;
+  description?: string | Record<string, string>;
+  references?: Record<string, any>;
+  records?: TraceabilityRecord;
+  [key: string]: any;
+}
+
+interface LocationSectionData {
+  currentLocation?: LocationData;
+  installationLocation?: LocationData;
+  storageLocation?: LocationData;
+  addresses?: any[];
+  coordinateSystems?: CoordinateSystem[];
+  visitedAreas?: VisitedArea[];
+  trackingCapabilities?: TrackingCapabilities;
+  traceability?: Traceability;
+  additionalData?: Record<string, any>;
+  [key: string]: any;
+}
+
 interface LocationSectionProps {
-  section: DPPSection;
+  section: DPPSection & { data?: { data?: LocationSectionData; additionalData?: any } };
   developerMode: boolean;
   setSelectedImage?: (url: string | null) => void;
   setSelectedPdf?: (url: string | null) => void;
-  setSelectedDocument?: (doc: any | null) => void;
+  // Remove unused parameter or add eslint disable comment if needed for future use
+  // setSelectedDocument?: (doc: any | null) => void;
 }
 
 const LocationSection: React.FC<LocationSectionProps> = ({
   section,
   developerMode,
-  setSelectedImage,
   setSelectedPdf,
-  setSelectedDocument
 }) => {
   // Extract data with better error handling
   const sectionData = section?.data || {};
-  const data = sectionData.data || {};
+  const data = sectionData.data || {} as LocationSectionData;
   const {
     currentLocation = {},
     installationLocation = {},
@@ -67,15 +179,8 @@ const LocationSection: React.FC<LocationSectionProps> = ({
     }
   };
 
-  // Function to handle image viewing
-  const handleViewImage = (imageUrl: string) => {
-    if (setSelectedImage) {
-      setSelectedImage(imageUrl);
-    }
-  };
-
   // Enhanced function to format address data with better structure
-  const formatAddress = (addressData: any) => {
+  const formatAddress = (addressData: any): AddressDetails | null => {
     if (!addressData) return null;
 
     // Handle direct string address
@@ -151,7 +256,7 @@ const LocationSection: React.FC<LocationSectionProps> = ({
   };
 
   // Enhanced rendering for location cards with more visual appeal
-  const renderPrimaryLocationCard = (location: any, title: string, icon: React.ComponentType) => {
+  const renderPrimaryLocationCard = (location: LocationData, title: string, icon: React.ComponentType) => {
     if (!location || Object.keys(location).length === 0) return null;
 
     const address = formatAddress(location.address);
@@ -169,7 +274,7 @@ const LocationSection: React.FC<LocationSectionProps> = ({
 
     // Extract location documents or PDFs if available
     const locationDocs = location.documents || [];
-    const hasPdfs = locationDocs.some((doc: any) =>
+    const hasPdfs = locationDocs.some((doc: LocationDocument) =>
       doc.file?.toLowerCase().endsWith('.pdf') ||
       doc.url?.toLowerCase().endsWith('.pdf')
     );
@@ -269,10 +374,12 @@ const LocationSection: React.FC<LocationSectionProps> = ({
                           ? `${latitude}, ${longitude}`
                           : address?.formattedAddress || "Location Map"}
                       </Text>
+
+                      {/* Fix the type error here - convert null to undefined for href */}
                       <Button
                         as={Link}
                         href={hasCoordinates
-                          ? coordinatesMapUrl
+                          ? coordinatesMapUrl || undefined
                           : address?.mapUrl}
                         isExternal
                         colorScheme="blue"
@@ -341,8 +448,9 @@ const LocationSection: React.FC<LocationSectionProps> = ({
 
                 <Card variant="outline">
                   <CardBody py={3}>
-                    {address.addressLines.map((line, i) => (
-                      <Text key={i} mb={i < address.addressLines.length - 1 ? 1 : 0}>
+                    {/* Use non-null assertion to tell TypeScript that addressLines is defined */}
+                    {address.addressLines!.map((line, i) => (
+                      <Text key={i} mb={i < address.addressLines!.length - 1 ? 1 : 0}>
                         {line}
                       </Text>
                     ))}
@@ -367,7 +475,7 @@ const LocationSection: React.FC<LocationSectionProps> = ({
                 </HStack>
 
                 <SimpleGrid columns={{ base: 1, sm: 2 }} spacing={3}>
-                  {locationDocs.map((doc: any, idx: number) => {
+                  {locationDocs.map((doc: LocationDocument, idx: number) => {
                     const docFile = doc.file || doc.url;
                     const isPdf = docFile?.toLowerCase().endsWith('.pdf');
 
@@ -378,7 +486,7 @@ const LocationSection: React.FC<LocationSectionProps> = ({
                         key={idx}
                         variant="outline"
                         cursor="pointer"
-                        onClick={() => handleViewPdf(docFile)}
+                        onClick={() => docFile && handleViewPdf(docFile)}
                         _hover={{ shadow: 'md' }}
                       >
                         <CardBody p={3}>
@@ -417,7 +525,8 @@ const LocationSection: React.FC<LocationSectionProps> = ({
                     _hover={{ bg: useColorModeValue('gray.100', 'gray.600') }}
                   >
                     <HStack flex="1" textAlign="left">
-                      <Icon as={MdDeveloperMode} color="purple.500" />
+                      {/* Changed MdDeveloperMode to MdCode which exists in react-icons/md */}
+                      <Icon as={MdCode} color="purple.500" />
                       <Text fontWeight="medium">Technical Details</Text>
                     </HStack>
                     <AccordionIcon />
@@ -439,7 +548,7 @@ const LocationSection: React.FC<LocationSectionProps> = ({
   };
 
   // Enhanced address card rendering
-  const renderAddressCard = (address: any, index: number) => {
+  const renderAddressCard = (address: any, index: number): React.ReactNode => {
     const formattedAddress = formatAddress(address);
 
     return (
@@ -482,7 +591,7 @@ const LocationSection: React.FC<LocationSectionProps> = ({
   };
 
   // Enhanced coordinate system card
-  const renderCoordinateSystemCard = (system: any, index: number) => (
+  const renderCoordinateSystemCard = (system: CoordinateSystem, index: number): React.ReactNode => (
     <Card
       key={index}
       variant="outline"
@@ -531,7 +640,7 @@ const LocationSection: React.FC<LocationSectionProps> = ({
             <Box w="100%">
               <Text fontWeight="medium" mb={2}>Ground Control Points</Text>
               <SimpleGrid columns={{ base: 1, md: 2 }} spacing={3}>
-                {system.groundControlPoints.map((point: any, idx: number) => (
+                {system.groundControlPoints.map((point, idx) => (
                   <Card key={idx} variant="outline" size="sm" bg={tertiaryBg} p={2}>
                     <VStack align="start" spacing={1}>
                       <Badge colorScheme="purple">Point {idx + 1}</Badge>
@@ -563,7 +672,7 @@ const LocationSection: React.FC<LocationSectionProps> = ({
   );
 
   // Enhanced visited area card
-  const renderVisitedAreaCard = (area: any, index: number) => {
+  const renderVisitedAreaCard = (area: VisitedArea, index: number): React.ReactNode => {
     const areaProps = area.properties || {};
     const areaName = areaProps.areaname || `Area ${index + 1}`;
     const areaKind = areaProps.kindofarea || "Unknown";
@@ -601,7 +710,7 @@ const LocationSection: React.FC<LocationSectionProps> = ({
               <Box w="100%">
                 {areaProps.arealayout.toLowerCase().endsWith('.pdf') ? (
                   <Button
-                    onClick={() => handleViewPdf(areaProps.arealayout)}
+                    onClick={() => handleViewPdf(areaProps.arealayout || '')} // Add empty string fallback
                     colorScheme="blue"
                     size="sm"
                     leftIcon={<Icon as={MdPictureAsPdf} />}
@@ -633,7 +742,7 @@ const LocationSection: React.FC<LocationSectionProps> = ({
                   maxHeight="150px"
                   overflow="auto"
                 >
-                  {area.regionCoordinates.map((coord: any, idx: number) => (
+                  {area.regionCoordinates.map((coord, idx) => (
                     <HStack key={idx} mb={1}>
                       <Badge size="sm">{idx + 1}</Badge>
                       <Text fontSize="sm">
@@ -879,7 +988,7 @@ const LocationSection: React.FC<LocationSectionProps> = ({
               {traceability.records && (
                 <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4} mb={4}>
                   {/* Area Records */}
-                  {traceability.records.area?.length > 0 && (
+                  {traceability.records?.area && traceability.records.area.length > 0 && (
                     <Card variant="outline">
                       <CardBody>
                         <VStack align="start" spacing={2}>
@@ -908,7 +1017,7 @@ const LocationSection: React.FC<LocationSectionProps> = ({
                   )}
 
                   {/* Location Records */}
-                  {traceability.records.location?.length > 0 && (
+                  {traceability.records?.location && traceability.records.location.length > 0 && (
                     <Card variant="outline">
                       <CardBody>
                         <VStack align="start" spacing={2}>

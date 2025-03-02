@@ -1,6 +1,7 @@
 
+import React from "react";
 import { Box, useColorModeValue, Text, Button, Link, HStack } from "@chakra-ui/react";
-import { FaMapMarkerAlt, FaExternalLinkAlt } from "react-icons/fa";
+import { FaExternalLinkAlt } from "react-icons/fa";
 
 interface MapRendererProps {
   coordinates: {

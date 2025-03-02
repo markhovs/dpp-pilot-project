@@ -81,9 +81,6 @@ const EditAAS: React.FC<EditAASProps> = ({ aas, isOpen, onClose }) => {
       Object.entries(data).filter(([_, value]) => value !== "")
     )
 
-    // Debug
-    console.log("Submitting AAS update:", filteredData);
-
     mutation.mutate({ aasId: aas.id, requestBody: filteredData })
   }
 

@@ -35,7 +35,7 @@ function PublicDPPExplorer() {
   const { id } = useParams({ from: '/dpp/$id' });
   const bgColor = useColorModeValue('white', 'gray.800');
 
-  // Step 1: Fetch the sections list
+  // Fetch the sections list
   const {
     data: sectionsList,
     isLoading: isLoadingSections,
@@ -49,7 +49,7 @@ function PublicDPPExplorer() {
     retry: 1,
   });
 
-  // Step 2: Only if we have sections, create the DPP structure with basic metadata
+  // Only if we have sections, create the DPP structure with basic metadata
   const hasMetadata = sectionsList && sectionsList.length > 0;
 
   // Prepare a skeleton DPP object with just the structure

@@ -10,74 +10,67 @@ import {
   Th,
   Thead,
   Tr,
-  IconButton,
   VStack,
   Box,
-  HStack,
-} from "@chakra-ui/react"
-import { useQuery, useQueryClient } from "@tanstack/react-query"
-import { createFileRoute, Link } from "@tanstack/react-router"
-import { FiEye, FiFileText } from "react-icons/fi";
+} from '@chakra-ui/react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { createFileRoute, Link } from '@tanstack/react-router';
 
-import { AasService, type UserPublic } from "../../client"
-import ActionsMenu from "../../components/Common/ActionsMenu"
-import Navbar from "../../components/Common/Navbar"
-import AddAAS from "../../components/AAS/AddAAS"
+import { AasService, type UserPublic } from '../../client';
+import ActionsMenu from '../../components/Common/ActionsMenu';
+import Navbar from '../../components/Common/Navbar';
+import AddAAS from '../../components/AAS/AddAAS';
 
 type AasItem = {
-  id: string
-  assetInformation?: { globalAssetId?: string }
-  displayName?: { text: string; language: string }[]
-  description?: { text: string; language: string }[]
-  submodels?: { keys: { type: string; value: string }[]; type: string }[]
-}
+  id: string;
+  assetInformation?: { globalAssetId?: string };
+  displayName?: { text: string; language: string }[];
+  description?: { text: string; language: string }[];
+  submodels?: { keys: { type: string; value: string }[]; type: string }[];
+};
 
 type AasActionMenuType = {
-  id: string
-  globalAssetId: string
-  displayName: string
-  description: string
-  submodelCount: number
-}
+  id: string;
+  globalAssetId: string;
+  displayName: string;
+  description: string;
+  submodelCount: number;
+};
 
-export const Route = createFileRoute("/_layout/")({
+export const Route = createFileRoute('/_layout/')({
   component: Dashboard,
-})
+});
 
 function getAasQueryOptions() {
   return {
     queryFn: async (): Promise<AasActionMenuType[]> => {
-      const response = (await AasService.listAllAas()) as AasItem[]
+      const response = (await AasService.listAllAas()) as AasItem[];
 
       if (!Array.isArray(response)) {
-        console.error("Invalid response format:", response)
-        return []
+        console.error('Invalid response format:', response);
+        return [];
       }
 
       return response.map((aas) => ({
         id: aas.id,
-        globalAssetId: aas.assetInformation?.globalAssetId ?? "N/A",
-        displayName:
-          aas.displayName?.find((d) => d.language === "en")?.text ?? "Unnamed AAS",
-        description:
-          aas.description?.find((d) => d.language === "en")?.text ?? "No Description",
+        globalAssetId: aas.assetInformation?.globalAssetId ?? 'N/A',
+        displayName: aas.displayName?.find((d) => d.language === 'en')?.text ?? 'Unnamed AAS',
+        description: aas.description?.find((d) => d.language === 'en')?.text ?? 'No Description',
         submodelCount: aas.submodels?.length ?? 0,
-      }))
+      }));
     },
-    queryKey: ["aas"],
-  }
+    queryKey: ['aas'],
+  };
 }
 
 function AasTable() {
   const queryClient = useQueryClient();
-  const currentUser = queryClient.getQueryData<UserPublic>(["currentUser"]);
-  const { data: aasList, isPending } = useQuery<AasActionMenuType[]>(
-    getAasQueryOptions()
-  )
+  const currentUser = queryClient.getQueryData<UserPublic>(['currentUser']);
+  const { data: aasList, isPending } = useQuery<AasActionMenuType[]>(getAasQueryOptions());
 
   return (
     <TableContainer>
-      <Table size={{ base: "sm", md: "md" }}>
+      <Table size={{ base: 'sm', md: 'md' }}>
         <Thead>
           <Tr>
             <Th>ID</Th>
@@ -92,7 +85,7 @@ function AasTable() {
             <Tr>
               {new Array(5).fill(null).map((_, index) => (
                 <Td key={index}>
-                  <SkeletonText noOfLines={1} paddingBlock="16px" />
+                  <SkeletonText noOfLines={1} paddingBlock='16px' />
                 </Td>
               ))}
             </Tr>
@@ -100,24 +93,28 @@ function AasTable() {
         ) : (
           <Tbody>
             {aasList?.map((aas) => (
-              <Tr key={aas.id} _hover={{ bg: "transparent" }} _focus={{ outline: "none" }}>
-                <Td isTruncated maxWidth="300px">
+              <Tr key={aas.id} _hover={{ bg: 'transparent' }} _focus={{ outline: 'none' }}>
+                <Td isTruncated maxWidth='300px'>
                   <Text
                     as={Link}
                     to={`/aas/${aas.id}`}
-                    _hover={{ textDecoration: "underline", color: "blue.500" }}
+                    _hover={{ textDecoration: 'underline', color: 'blue.500' }}
                   >
                     {aas.id}
                   </Text>
                 </Td>
-                <Td isTruncated maxWidth="200px">{aas.globalAssetId}</Td>
-                <Td isTruncated maxWidth="200px">{aas.displayName}</Td>
+                <Td isTruncated maxWidth='200px'>
+                  {aas.globalAssetId}
+                </Td>
+                <Td isTruncated maxWidth='200px'>
+                  {aas.displayName}
+                </Td>
                 <Td>{aas.submodelCount}</Td>
                 <Td>
                   {currentUser?.is_superuser ? (
-                    <ActionsMenu type="AAS" value={aas} />
+                    <ActionsMenu type='AAS' value={aas} />
                   ) : (
-                    <ActionsMenu type="AAS" value={aas} />
+                    <ActionsMenu type='AAS' value={aas} />
                   )}
                 </Td>
               </Tr>
@@ -126,22 +123,22 @@ function AasTable() {
         )}
       </Table>
     </TableContainer>
-  )
+  );
 }
 
 function Dashboard() {
   const queryClient = useQueryClient();
-  const currentUser = queryClient.getQueryData<UserPublic>(["currentUser"]);
+  const currentUser = queryClient.getQueryData<UserPublic>(['currentUser']);
 
   return (
-    <Container maxW="full">
-      <VStack align="stretch" spacing={8}>
-        <Heading size="lg" textAlign={{ base: "center", md: "left" }} pt={12}>
+    <Container maxW='full'>
+      <VStack align='stretch' spacing={8}>
+        <Heading size='lg' textAlign={{ base: 'center', md: 'left' }} pt={12}>
           AAS Management
         </Heading>
 
         <Box>
-          {currentUser?.is_superuser && <Navbar type="AAS" addModalAs={AddAAS} />}
+          {currentUser?.is_superuser && <Navbar type='AAS' addModalAs={AddAAS} />}
           <Box mt={6}>
             <AasTable />
           </Box>

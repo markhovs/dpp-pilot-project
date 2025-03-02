@@ -1,13 +1,23 @@
 import {
-  Box, Heading, Text, VStack, HStack, Icon, useColorModeValue,
-  SimpleGrid, Stat, StatLabel, StatNumber, StatHelpText,
-  Table, Tbody, Tr, Th, Td, TableContainer
-} from "@chakra-ui/react";
-import { MdDeveloperMode } from "react-icons/md";
-import { DPPSection } from "../../../types/dpp";
-import DynamicFieldsRenderer from "../renderers/DynamicFieldsRenderer";
-import { getFirstLangValue } from "../../../utils/dpp";
-import AdditionalDataSection from "../AdditionalDataSection";
+  Box,
+  Heading,
+  VStack,
+  useColorModeValue,
+  SimpleGrid,
+  Stat,
+  StatLabel,
+  StatNumber,
+  StatHelpText,
+  Table,
+  Tbody,
+  Tr,
+  Th,
+  Td,
+  TableContainer,
+} from '@chakra-ui/react';
+import { DPPSection } from '../../../types/dpp';
+import DynamicFieldsRenderer from '../renderers/DynamicFieldsRenderer';
+import AdditionalDataSection from '../AdditionalDataSection';
 
 interface SustainabilitySectionProps {
   section: DPPSection;
@@ -16,50 +26,67 @@ interface SustainabilitySectionProps {
 
 const SustainabilitySection: React.FC<SustainabilitySectionProps> = ({
   section,
-  developerMode
+  developerMode,
 }) => {
   // Fix data access to match API response structure
   const sectionData = section?.data || {};
   const data = sectionData.data || {};
-  const { carbonFootprint = {}, energyEfficiency = {}, materialEfficiency = {}, additionalData } = data;
+  const {
+    carbonFootprint = {},
+    energyEfficiency = {},
+    materialEfficiency = {},
+    additionalData,
+  } = data;
 
-  const cardBg = useColorModeValue("white", "gray.800");
-  const borderColor = useColorModeValue("gray.200", "gray.600");
-  const statBg = useColorModeValue("blue.50", "blue.900");
-  const secondaryStatBg = useColorModeValue("green.50", "green.900");
+  const cardBg = useColorModeValue('white', 'gray.800');
+  const borderColor = useColorModeValue('gray.200', 'gray.600');
+  const statBg = useColorModeValue('blue.50', 'blue.900');
+  const secondaryStatBg = useColorModeValue('green.50', 'green.900');
 
   return (
-    <VStack spacing={6} align="stretch">
+    <VStack spacing={6} align='stretch'>
       {/* Carbon Footprint */}
       {Object.keys(carbonFootprint).length > 0 && (
-        <Box p={5} shadow="md" borderWidth="1px" borderColor={borderColor} borderRadius="lg" bg={cardBg}>
-          <Heading size="md" mb={4}>Carbon Footprint</Heading>
+        <Box
+          p={5}
+          shadow='md'
+          borderWidth='1px'
+          borderColor={borderColor}
+          borderRadius='lg'
+          bg={cardBg}
+        >
+          <Heading size='md' mb={4}>
+            Carbon Footprint
+          </Heading>
 
           <SimpleGrid columns={{ base: 1, md: 2 }} spacing={6}>
             {/* Product Carbon Footprint */}
             {carbonFootprint.product && (
-              <Box p={4} borderRadius="md" bg={statBg}>
-                <Heading size="sm" mb={3}>Product Carbon Footprint</Heading>
+              <Box p={4} borderRadius='md' bg={statBg}>
+                <Heading size='sm' mb={3}>
+                  Product Carbon Footprint
+                </Heading>
                 <Stat>
                   <StatLabel>CO₂ Equivalent</StatLabel>
-                  <StatNumber>{carbonFootprint.product.value} {carbonFootprint.product.unit}</StatNumber>
+                  <StatNumber>
+                    {carbonFootprint.product.value} {carbonFootprint.product.unit}
+                  </StatNumber>
                   {carbonFootprint.product.calculationMethod && (
-                    <StatHelpText>
-                      Method: {carbonFootprint.product.calculationMethod}
-                    </StatHelpText>
+                    <StatHelpText>Method: {carbonFootprint.product.calculationMethod}</StatHelpText>
                   )}
                 </Stat>
 
                 {/* Additional details in table */}
                 <TableContainer mt={4}>
-                  <Table variant="simple" size="sm">
+                  <Table variant='simple' size='sm'>
                     <Tbody>
-                      {carbonFootprint.product.lifecycle && carbonFootprint.product.lifecycle.phases && (
-                        <Tr>
-                          <Th width="40%">Lifecycle Phases</Th>
-                          <Td>{carbonFootprint.product.lifecycle.phases}</Td>
-                        </Tr>
-                      )}
+                      {carbonFootprint.product.lifecycle &&
+                        carbonFootprint.product.lifecycle.phases && (
+                          <Tr>
+                            <Th width='40%'>Lifecycle Phases</Th>
+                            <Td>{carbonFootprint.product.lifecycle.phases}</Td>
+                          </Tr>
+                        )}
                       {carbonFootprint.product.validFrom && (
                         <Tr>
                           <Th>Valid From</Th>
@@ -80,11 +107,15 @@ const SustainabilitySection: React.FC<SustainabilitySectionProps> = ({
 
             {/* Transport Carbon Footprint */}
             {carbonFootprint.transport && (
-              <Box p={4} borderRadius="md" bg={secondaryStatBg}>
-                <Heading size="sm" mb={3}>Transport Carbon Footprint</Heading>
+              <Box p={4} borderRadius='md' bg={secondaryStatBg}>
+                <Heading size='sm' mb={3}>
+                  Transport Carbon Footprint
+                </Heading>
                 <Stat>
                   <StatLabel>CO₂ Equivalent</StatLabel>
-                  <StatNumber>{carbonFootprint.transport.value} {carbonFootprint.transport.unit}</StatNumber>
+                  <StatNumber>
+                    {carbonFootprint.transport.value} {carbonFootprint.transport.unit}
+                  </StatNumber>
                   {carbonFootprint.transport.calculationMethod && (
                     <StatHelpText>
                       Method: {carbonFootprint.transport.calculationMethod}
@@ -94,11 +125,11 @@ const SustainabilitySection: React.FC<SustainabilitySectionProps> = ({
 
                 {/* Additional details in table */}
                 <TableContainer mt={4}>
-                  <Table variant="simple" size="sm">
+                  <Table variant='simple' size='sm'>
                     <Tbody>
                       {carbonFootprint.transport.processes && (
                         <Tr>
-                          <Th width="40%">Processes</Th>
+                          <Th width='40%'>Processes</Th>
                           <Td>{carbonFootprint.transport.processes}</Td>
                         </Tr>
                       )}
@@ -125,24 +156,40 @@ const SustainabilitySection: React.FC<SustainabilitySectionProps> = ({
 
       {/* Energy Efficiency - Only render if we have data */}
       {Object.keys(energyEfficiency).length > 0 && (
-        <Box p={5} shadow="md" borderWidth="1px" borderColor={borderColor} borderRadius="lg" bg={cardBg}>
-          <Heading size="md" mb={4}>Energy Efficiency</Heading>
+        <Box
+          p={5}
+          shadow='md'
+          borderWidth='1px'
+          borderColor={borderColor}
+          borderRadius='lg'
+          bg={cardBg}
+        >
+          <Heading size='md' mb={4}>
+            Energy Efficiency
+          </Heading>
           <DynamicFieldsRenderer data={energyEfficiency} />
         </Box>
       )}
 
       {/* Material Efficiency - Only render if we have data */}
       {Object.keys(materialEfficiency).length > 0 && (
-        <Box p={5} shadow="md" borderWidth="1px" borderColor={borderColor} borderRadius="lg" bg={cardBg}>
-          <Heading size="md" mb={4}>Material Efficiency</Heading>
+        <Box
+          p={5}
+          shadow='md'
+          borderWidth='1px'
+          borderColor={borderColor}
+          borderRadius='lg'
+          bg={cardBg}
+        >
+          <Heading size='md' mb={4}>
+            Material Efficiency
+          </Heading>
           <DynamicFieldsRenderer data={materialEfficiency} />
         </Box>
       )}
 
       {/* Developer Mode - Additional Data */}
-      {developerMode && additionalData && (
-        <AdditionalDataSection additionalData={additionalData} />
-      )}
+      {developerMode && additionalData && <AdditionalDataSection additionalData={additionalData} />}
     </VStack>
   );
 };

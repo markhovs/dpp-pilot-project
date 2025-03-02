@@ -1,3 +1,6 @@
+import { LanguageItem, AllLanguageFormats } from '../types/dpp';
+import React from 'react'; // Add React import for ReactNode return type
+
 /**
  * Utility functions for handling DPP data
  */
@@ -25,20 +28,52 @@ export function formatValue(value?: any, unit?: string): string {
 }
 
 /**
- * Extracts the first language value from a multilanguage property
+ * Returns the first language value from a multi-language object or the string itself
+ * Can handle both object format {en: "text"} and array format [{language: "en", text: "text"}]
  */
-export function getFirstLangValue(mlp?: Record<string, string> | Array<{language: string, text: string}>): string {
-  if (!mlp) return "";
+export const getFirstLangValue = (
+  value: AllLanguageFormats | undefined
+): string => {
+  if (!value) return '';
 
-  if (Array.isArray(mlp)) {
-    // Handle array format (preferred English)
-    const en = mlp.find(item => item.language === "en");
-    return en?.text || mlp[0]?.text || "";
-  } else {
-    // Handle object format (preferred English)
-    return mlp["en"] || Object.values(mlp)[0] || "";
+  // Handle string values
+  if (typeof value === 'string') return value;
+
+  // Handle array format (common in AAS)
+  if (Array.isArray(value)) {
+    if (value.length === 0) return '';
+
+    // Need to check if first item exists and has required properties
+    const firstItem = value[0];
+
+    // Check if it's an array of language items
+    if (firstItem && typeof firstItem === 'object' &&
+        'language' in firstItem && 'text' in firstItem) {
+      // Type assertion to help TypeScript understand the structure
+      const languageItems = value as LanguageItem[];
+
+      // Try to find English first
+      const enEntry = languageItems.find(item =>
+        item.language && item.language.toLowerCase() === 'en'
+      );
+      return enEntry?.text || languageItems[0]?.text || '';
+    }
+
+    // For other arrays, join values
+    return value.map(v => String(v)).join(', ');
   }
-}
+
+  // Handle object format (key-value pairs)
+  const entries = Object.entries(value);
+  if (!entries.length) return '';
+
+  // Prioritize English if available
+  const engEntry = entries.find(([lang]) => lang.toLowerCase() === 'en');
+  if (engEntry) return engEntry[1];
+
+  // Otherwise take the first entry
+  return entries[0][1];
+};
 
 /**
  * Format field names for better display
@@ -205,45 +240,33 @@ export function isDateString(value: string): boolean {
 }
 
 /**
- * Check if a string is an email address
+ * Checks if a string is an email address
  */
-export function isEmail(value: string): boolean {
-  if (typeof value !== 'string') return false;
-
-  // Basic email validation regex
-  const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+export const isEmail = (value: string): boolean => {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   return emailRegex.test(value);
-}
+};
 
 /**
- * Check if a string looks like a phone number
+ * Checks if a string is a phone number
  */
-export function isPhoneNumber(value: string): boolean {
-  if (typeof value !== 'string') return false;
-
-  // Remove common formatting characterss
-  const cleaned = value.replace(/[\s\-\(\)\.\+]/g, '');
-
-  // Check if it's numeric and has a reasonable length for a phone number (6-15 digits)
-  return /^\d{6,15}$/.test(cleaned);
-}
+export const isPhoneNumber = (value: string): boolean => {
+  // Simple regex for phone numbers - can be enhanced for specific formats
+  const phoneRegex = /^[+]?[(]?[0-9]{3}[)]?[-\s.]?[0-9]{3}[-\s.]?[0-9]{4,6}$/;
+  return phoneRegex.test(value);
+};
 
 /**
- * Check if a string is a URL
+ * Checks if a string is a URL
  */
-export function isURL(value: string): boolean {
-  if (typeof value !== 'string') return false;
-
+export const isURL = (value: string): boolean => {
   try {
-    // Try to create a URL object - this will throw if invalid
     new URL(value);
-
-    // Make sure it has http/https protocol
-    return value.startsWith('http://') || value.startsWith('https://');
+    return true;
   } catch {
     return false;
   }
-}
+};
 
 /**
  * Renders a value in a user-friendly way based on its type

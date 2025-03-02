@@ -30,8 +30,39 @@ import { DPPSection } from '../../../types/dpp';
 import AdditionalDataSection from '../AdditionalDataSection';
 import DynamicFieldsRenderer from '../renderers/DynamicFieldsRenderer';
 
+// Define interfaces for compliance data structures
+interface ComplianceMarking {
+  name: string;
+  designation?: string;
+  issueDate?: string;
+  expiryDate?: string;
+  file?: string;
+  additionalText?: string;
+  properties?: Record<string, any>;
+  [key: string]: any;
+}
+
+interface ComplianceStandard {
+  name: string;
+  value?: string;
+  [key: string]: any;
+}
+
+interface ComplianceCertification {
+  name: string;
+  value?: string;
+  [key: string]: any;
+}
+
+interface ComplianceSectionData {
+  markings?: ComplianceMarking[];
+  certifications?: ComplianceCertification[];
+  standards?: ComplianceStandard[];
+  [key: string]: any;
+}
+
 interface ComplianceSectionProps {
-  section: DPPSection;
+  section: DPPSection & { data?: { data?: ComplianceSectionData; additionalData?: any } };
   developerMode: boolean;
   setSelectedImage: (url: string | null) => void;
   setSelectedPdf?: (url: string | null) => void;
@@ -43,11 +74,10 @@ const ComplianceSection: React.FC<ComplianceSectionProps> = ({
   developerMode,
   setSelectedImage,
 }) => {
-  const data = section?.data?.data || {};
+  const data = section?.data?.data || {} as ComplianceSectionData;
   const { markings = [], certifications = [], standards = [] } = data;
 
   const cardBg = useColorModeValue('white', 'gray.700');
-  const borderColor = useColorModeValue('gray.200', 'gray.600');
   const labelColor = useColorModeValue('gray.600', 'gray.400');
 
   // Check if we have any data to display
@@ -61,8 +91,8 @@ const ComplianceSection: React.FC<ComplianceSectionProps> = ({
     );
   }
 
-  const renderMarkingCard = (marking: any, index: number) => {
-    const isExpired = new Date(marking.expiryDate) < new Date();
+  const renderMarkingCard = (marking: ComplianceMarking, index: number): React.ReactNode => {
+    const isExpired = marking.expiryDate && new Date(marking.expiryDate) < new Date();
     const expiryStatus = isExpired ? "error" : "success";
 
     return (
@@ -76,7 +106,7 @@ const ComplianceSection: React.FC<ComplianceSectionProps> = ({
                 height="120px"
                 overflow="hidden"
                 borderRadius="md"
-                onClick={() => setSelectedImage(marking.file)}
+                onClick={() => setSelectedImage(marking.file || null)}
                 cursor="pointer"
                 bg={useColorModeValue("gray.50", "gray.800")}
               >
@@ -97,9 +127,11 @@ const ComplianceSection: React.FC<ComplianceSectionProps> = ({
                   <Icon as={MdVerified} color="green.500" />
                   <Text fontWeight="bold">{marking.name}</Text>
                 </HStack>
-                <Badge colorScheme={expiryStatus}>
-                  {isExpired ? "Expired" : "Valid"}
-                </Badge>
+                {marking.expiryDate && (
+                  <Badge colorScheme={expiryStatus}>
+                    {isExpired ? "Expired" : "Valid"}
+                  </Badge>
+                )}
               </HStack>
 
               {marking.designation && (
@@ -108,17 +140,23 @@ const ComplianceSection: React.FC<ComplianceSectionProps> = ({
                 </Text>
               )}
 
-              <HStack spacing={4} fontSize="sm">
-                <HStack>
-                  <Icon as={MdCalendarToday} color="blue.500" />
-                  <Text>Issued: {marking.issueDate}</Text>
+              {(marking.issueDate || marking.expiryDate) && (
+                <HStack spacing={4} fontSize="sm">
+                  {marking.issueDate && (
+                    <HStack>
+                      <Icon as={MdCalendarToday} color="blue.500" />
+                      <Text>Issued: {marking.issueDate}</Text>
+                    </HStack>
+                  )}
+                  {marking.expiryDate && (
+                    <HStack>
+                      <Icon as={isExpired ? MdOutlineWarning : MdCalendarToday}
+                            color={isExpired ? "red.500" : "green.500"} />
+                      <Text>Expires: {marking.expiryDate}</Text>
+                    </HStack>
+                  )}
                 </HStack>
-                <HStack>
-                  <Icon as={isExpired ? MdOutlineWarning : MdCalendarToday}
-                        color={isExpired ? "red.500" : "green.500"} />
-                  <Text>Expires: {marking.expiryDate}</Text>
-                </HStack>
-              </HStack>
+              )}
 
               {marking.additionalText && (
                 <Text fontSize="sm" color={labelColor}>
@@ -158,7 +196,9 @@ const ComplianceSection: React.FC<ComplianceSectionProps> = ({
           <Box mb={6}>
             <Heading size="md" mb={4}>Product Markings</Heading>
             <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} spacing={4}>
-              {markings.map((marking, index) => renderMarkingCard(marking, index))}
+              {markings.map((marking: ComplianceMarking, index: number) =>
+                renderMarkingCard(marking, index)
+              )}
             </SimpleGrid>
           </Box>
         )}
@@ -169,14 +209,14 @@ const ComplianceSection: React.FC<ComplianceSectionProps> = ({
             <Divider mb={6} />
             <Heading size="md" mb={4}>Standards</Heading>
             <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} spacing={4}>
-              {standards.map((standard, index) => (
+              {standards.map((standard: ComplianceStandard, index: number) => (
                 <Card key={index} variant="outline" bg={cardBg}>
                   <CardBody>
                     <HStack alignItems="flex-start">
                       <Icon as={MdDescription} boxSize={5} color="blue.500" mt={1} />
                       <Stack>
                         <Text fontWeight="medium">{standard.name}</Text>
-                        <Text fontSize="sm">{standard.value}</Text>
+                        {standard.value && <Text fontSize="sm">{standard.value}</Text>}
                       </Stack>
                     </HStack>
                   </CardBody>
@@ -192,14 +232,14 @@ const ComplianceSection: React.FC<ComplianceSectionProps> = ({
             <Divider mb={6} />
             <Heading size="md" mb={4}>Certifications</Heading>
             <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
-              {certifications.map((cert, index) => (
+              {certifications.map((cert: ComplianceCertification, index: number) => (
                 <Card key={index} variant="outline" bg={cardBg}>
                   <CardBody>
                     <HStack alignItems="flex-start">
                       <Icon as={MdVerified} boxSize={5} color="green.500" mt={1} />
                       <Stack>
                         <Text fontWeight="medium">{cert.name}</Text>
-                        <Text fontSize="sm">{cert.value}</Text>
+                        {cert.value && <Text fontSize="sm">{cert.value}</Text>}
                       </Stack>
                     </HStack>
                   </CardBody>
@@ -211,7 +251,7 @@ const ComplianceSection: React.FC<ComplianceSectionProps> = ({
       </Box>
 
       {/* Developer Mode - Additional Data */}
-      {developerMode && section.data.additionalData && (
+      {developerMode && section.data?.additionalData && (
         <AdditionalDataSection additionalData={section.data.additionalData} />
       )}
     </VStack>

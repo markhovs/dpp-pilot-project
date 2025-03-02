@@ -19,7 +19,6 @@ interface ChartRendererProps {
 
 const ChartRenderer: React.FC<ChartRendererProps> = ({
   data,
-  title,
   showRawData = false,
   setShowRawData = () => {}
 }) => {
