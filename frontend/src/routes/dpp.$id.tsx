@@ -11,14 +11,18 @@ import {
   AlertTitle,
   AlertDescription,
   useColorModeValue,
+  useColorMode, // Added for theme toggling
   Flex,
   Image,
   Link,
+  IconButton, // Added for theme toggle button
 } from '@chakra-ui/react';
 import { useQuery } from '@tanstack/react-query';
 import { DppService } from '../client';
 import DPPViewer from '../components/DPP/DPPViewer';
 import { CompleteDPP, DPPSection } from '../types/dpp';
+// Import sun/moon icons for the toggle
+import { FiSun, FiMoon } from 'react-icons/fi';
 
 export const Route = createFileRoute('/dpp/$id')({
   component: PublicDPPExplorer,
@@ -34,6 +38,8 @@ export const Route = createFileRoute('/dpp/$id')({
 function PublicDPPExplorer() {
   const { id } = useParams({ from: '/dpp/$id' });
   const bgColor = useColorModeValue('white', 'gray.800');
+  // Add color mode hook to control dark/light theme
+  const { colorMode, toggleColorMode } = useColorMode();
 
   // Fetch the sections list
   const {
@@ -98,11 +104,23 @@ function PublicDPPExplorer() {
             </Box>
           </Link>
 
-          <Box>
-            <Heading as='h1' size='md' mb={2} color='gray.600'>
-              Digital Product Passport
-            </Heading>
-          </Box>
+          <Flex align="center">
+            {/* Add Theme Toggle Button */}
+            <IconButton
+              aria-label={`Switch to ${colorMode === 'light' ? 'dark' : 'light'} mode`}
+              icon={colorMode === 'light' ? <FiMoon /> : <FiSun />}
+              variant="ghost"
+              color={useColorModeValue('gray.600', 'gray.200')}
+              onClick={toggleColorMode}
+              mr={4}
+            />
+
+            <Box>
+              <Heading as='h1' size='md' mb={2} color='gray.600'>
+                Digital Product Passport
+              </Heading>
+            </Box>
+          </Flex>
         </Flex>
 
         {isLoading ? (
