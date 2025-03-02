@@ -23,7 +23,7 @@ import {
 } from "../../client"
 import useAuth from "../../hooks/useAuth"
 import useCustomToast from "../../hooks/useCustomToast"
-import { emailPattern, handleError } from "../../utils"
+import { emailPattern, handleError } from "../../utils/core"
 
 const UserInformation = () => {
   const queryClient = useQueryClient()

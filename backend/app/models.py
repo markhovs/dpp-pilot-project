@@ -2,9 +2,9 @@ import uuid
 from datetime import datetime
 from typing import Any
 
-from pydantic import EmailStr
+from pydantic import BaseModel, EmailStr
 from sqlalchemy.dialects.postgresql import JSONB
-from sqlmodel import Column, Field, Relationship, SQLModel
+from sqlmodel import Column, Field, SQLModel
 
 
 # Shared properties
@@ -46,7 +46,6 @@ class UpdatePassword(SQLModel):
 class User(UserBase, table=True):
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     hashed_password: str
-    items: list["Item"] = Relationship(back_populates="owner", cascade_delete=True)
 
 
 # Properties to return via API, id is always required
@@ -104,7 +103,6 @@ class AASAttachSubmodelsRequest(SQLModel):
 
 class AASAssetPublic(AASAssetBase):
     id: str
-    # Here 'data' is not optional in the actual DB record.
     data: dict[str, Any]
     created_at: datetime
     updated_at: datetime
@@ -162,41 +160,26 @@ class AASSubmodelsPublic(SQLModel):
     count: int
 
 
-# Shared properties
-class ItemBase(SQLModel):
-    title: str = Field(min_length=1, max_length=255)
-    description: str | None = Field(default=None, max_length=255)
+# DPP Models - changed to inherit from BaseModel instead of SQLModel
+class DPPSection(BaseModel):
+    title: str
+    data: dict[str, Any]
+    metadata: dict[str, Any] | None = None
 
 
-# Properties to receive on item creation
-class ItemCreate(ItemBase):
-    pass
+class DPPSectionInfo(BaseModel):
+    id: str
+    title: str
+    status: str
+    description: str | None = None
 
 
-# Properties to receive on item update
-class ItemUpdate(ItemBase):
-    title: str | None = Field(default=None, min_length=1, max_length=255)  # type: ignore
-
-
-# Database model, database table inferred from class name
-class Item(ItemBase, table=True):
-    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
-    title: str = Field(max_length=255)
-    owner_id: uuid.UUID = Field(
-        foreign_key="user.id", nullable=False, ondelete="CASCADE"
-    )
-    owner: User | None = Relationship(back_populates="items")
-
-
-# Properties to return via API, id is always required
-class ItemPublic(ItemBase):
-    id: uuid.UUID
-    owner_id: uuid.UUID
-
-
-class ItemsPublic(SQLModel):
-    data: list[ItemPublic]
-    count: int
+class CompleteDPP(BaseModel):
+    id: str
+    generated_at: str
+    format: str
+    sections: dict[str, DPPSection]
+    metadata: dict[str, Any] | None = None
 
 
 # Generic message

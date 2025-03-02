@@ -35,30 +35,37 @@ export type Body_login_login_access_token = {
   client_secret?: string | null
 }
 
+export type CompleteDPP = {
+  id: string
+  generated_at: string
+  format: string
+  sections: {
+    [key: string]: DPPSection
+  }
+  metadata?: {
+    [key: string]: unknown
+  } | null
+}
+
+export type DPPSection = {
+  title: string
+  data: {
+    [key: string]: unknown
+  }
+  metadata?: {
+    [key: string]: unknown
+  } | null
+}
+
+export type DPPSectionInfo = {
+  id: string
+  title: string
+  status: string
+  description?: string | null
+}
+
 export type HTTPValidationError = {
   detail?: Array<ValidationError>
-}
-
-export type ItemCreate = {
-  title: string
-  description?: string | null
-}
-
-export type ItemPublic = {
-  title: string
-  description?: string | null
-  id: string
-  owner_id: string
-}
-
-export type ItemsPublic = {
-  data: Array<ItemPublic>
-  count: number
-}
-
-export type ItemUpdate = {
-  title?: string | null
-  description?: string | null
 }
 
 export type Message = {
@@ -198,37 +205,48 @@ export type AasGetAasData = {
 
 export type AasGetAasResponse = unknown
 
-export type ItemsReadItemsData = {
-  limit?: number
-  skip?: number
+export type DppListDppSectionsData = {
+  /**
+   * ID of the AAS to generate DPP for
+   */
+  aasId: string
+  /**
+   * Filter sections by status (available, incomplete)
+   */
+  statusFilter?: string | null
 }
 
-export type ItemsReadItemsResponse = ItemsPublic
+export type DppListDppSectionsResponse = Array<DPPSectionInfo>
 
-export type ItemsCreateItemData = {
-  requestBody: ItemCreate
+export type DppGetDppSectionData = {
+  /**
+   * ID of the AAS
+   */
+  aasId: string
+  /**
+   * Whether to include raw data in the response
+   */
+  includeRaw?: boolean
+  /**
+   * ID of the section to retrieve
+   */
+  sectionId: string
 }
 
-export type ItemsCreateItemResponse = ItemPublic
+export type DppGetDppSectionResponse = DPPSection
 
-export type ItemsReadItemData = {
-  id: string
+export type DppDownloadCompleteDppData = {
+  /**
+   * ID of the AAS to generate DPP for
+   */
+  aasId: string
+  /**
+   * Whether to include raw data in the output
+   */
+  includeRaw?: boolean
 }
 
-export type ItemsReadItemResponse = ItemPublic
-
-export type ItemsUpdateItemData = {
-  id: string
-  requestBody: ItemUpdate
-}
-
-export type ItemsUpdateItemResponse = ItemPublic
-
-export type ItemsDeleteItemData = {
-  id: string
-}
-
-export type ItemsDeleteItemResponse = Message
+export type DppDownloadCompleteDppResponse = CompleteDPP
 
 export type LoginLoginAccessTokenData = {
   formData: Body_login_login_access_token

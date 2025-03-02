@@ -21,6 +21,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import SubmodelElement from "./SubmodelElement";
 import { AasService } from "../../client";
 import useCustomToast from "../../hooks/useCustomToast";
+import { validateValue, findElementByPath } from "../../utils/aas";
 
 interface SubmodelItemProps {
   submodel: any;
@@ -46,11 +47,34 @@ const SubmodelItem = ({ submodel, aasId }: SubmodelItemProps) => {
   const revision = submodel.administration?.revision || "Unknown";
   const templateId = submodel.administration?.templateId || "N/A";
 
-  const handleInputChange = (idShort: string, newValue: string) => {
-    setEditedValues((prev) => ({ ...prev, [idShort]: newValue }));
+  // Modified to build paths
+  const handleInputChange = (path: string, newValue: any) => {
+    setEditedValues((prev) => ({ ...prev, [path]: newValue }));
   };
 
   const handleSave = async () => {
+    // Validate all edited values before saving
+    const invalidFields = Object.entries(editedValues).reduce((acc, [path, value]) => {
+      // Find the corresponding element and its type using the full path
+      const element = findElementByPath(submodel, path);
+      if (element && element.valueType) {
+        const validation = validateValue(value, element.valueType);
+        if (!validation.isValid) {
+          acc[path] = validation.message || `Invalid value for ${path}`;
+        }
+      }
+      return acc;
+    }, {} as Record<string, string>);
+
+    if (Object.keys(invalidFields).length > 0) {
+      showToast(
+        "Validation Error",
+        "Please correct the invalid values before saving",
+        "error"
+      );
+      return;
+    }
+
     try {
       await AasService.updateSubmodelData({
         aasId,
@@ -73,7 +97,6 @@ const SubmodelItem = ({ submodel, aasId }: SubmodelItemProps) => {
         "Failed to update submodel values. Please try again.",
         "error"
       );
-      // Keep edit mode active when there's an error
     }
   };
 
@@ -187,6 +210,7 @@ const SubmodelItem = ({ submodel, aasId }: SubmodelItemProps) => {
               editedValues={editedValues}
               aasId={aasId}
               submodelId={submodel.id}
+              parentPath={submodel.idShort}
             />
           ))}
         </VStack>

@@ -2,13 +2,17 @@ import json
 from datetime import datetime
 
 from basyx.aas import model
-from basyx.aas.model.datatypes import Date, from_xsd
 from basyx.aas.util.identification import UUIDGenerator
+from basyx.aas.util.traversal import walk_submodel
 from sqlmodel import Session, select
 
-from app.aas.serialization import deserialize_aas_from_json, serialize_aas_to_json
-from app.aas.template_loader import import_aasx_package, list_template_packages
 from app.models import AASAsset, AASSubmodel
+from app.services.aas.serialization import (
+    deserialize_aas_from_json,
+    serialize_aas_to_json,
+)
+from app.services.aas.template_loader import import_aasx_package, list_template_packages
+from app.services.aas.utils import convert_value
 
 # Initialize a UUID generator (could be injected/configured as needed)
 uuid_gen = UUIDGenerator()
@@ -206,101 +210,192 @@ def update_submodel_data(
     aas_id: str, submodel_id: str, new_data: dict, session: Session
 ) -> dict:
     """
-    Update property values on a submodel instance that belongs to a given AAS.
+    Update property values on a submodel instance using path translation for indexed elements.
+
+    This function handles the complex path mapping between frontend indexed paths (like
+    'AssetLocation/Addresses[0]/AddressLine1') and backend paths with generated IDs.
+
+    Args:
+        aas_id: ID of the AAS containing the submodel
+        submodel_id: ID of the submodel to update
+        new_data: Dictionary with paths as keys and new values
+        session: Database session
+
+    Returns:
+        Updated submodel data as dictionary
+
+    Raises:
+        ValueError: If AAS or submodel not found, or on validation errors
     """
-    # 1. Retrieve the parent AAS asset.
+    # Verify AAS exists and submodel belongs to it
     asset_record = session.get(AASAsset, aas_id)
     if not asset_record:
         raise ValueError(f"No asset found with id '{aas_id}'.")
 
-    # 2. Deserialize the AAS shell (to confirm membership of submodel).
     aas_shell = deserialize_aas_from_json(json.dumps(asset_record.data))
     if not any(ref.key[0].value == submodel_id for ref in aas_shell.submodel):
         raise ValueError(f"Submodel '{submodel_id}' is not part of AAS '{aas_id}'.")
 
-    # 3. Get the Submodel record and BaSyx object from DB.
     sub_record = session.get(AASSubmodel, submodel_id)
     if not sub_record:
         raise ValueError(f"No submodel found with id '{submodel_id}'.")
 
     sub_obj = deserialize_aas_from_json(json.dumps(sub_record.data))
-    provider = model.DictObjectStore()
-    provider.add(sub_obj)
 
-    # 4. Recursive helper to find *all* Property or MultiLanguageProperty elements.
-    def find_all_properties(element) -> list[model.SubmodelElement]:
-        results = []
+    # Build a map of id_short paths to elements
+    element_map = {}
+    string_rep_map = {}
 
-        # If it's a Property or MLP, collect it
-        if isinstance(
-            element, model.Property | model.MultiLanguageProperty | model.File
-        ):
-            results.append(element)
-            return results
+    for element in walk_submodel(sub_obj):
+        if hasattr(element, "id_short"):
+            # Build the path from element to root
+            path = []
+            current = element
+            while current and hasattr(current, "id_short"):
+                path.insert(0, current.id_short)
+                current = current.parent
 
-        children = []
+            path_str = "/".join(path)
+            element_map[path_str] = element
+            string_rep_map[path_str] = str(element)
 
-        # Check submodel_element
-        if hasattr(element, "submodel_element") and element.submodel_element:
-            children.extend(element.submodel_element)
+    # Create path mappings for frontend-to-backend path translation
+    indexed_paths = {}
+    simplified_indexed_paths = {}  # Paths without UUID (what frontend sends)
 
-        # Check value
-        if hasattr(element, "value") and element.value is not None:
-            val = element.value
-            if isinstance(val, list):
-                children.extend(val)
-            elif isinstance(val, model.base.NamespaceSet):
-                for child in val:
-                    children.append(child)
-            else:
-                # Debug: unknown type
-                print("DEBUG: 'value' is neither list nor NamespaceSet:", type(val))
+    for path, element_str in string_rep_map.items():
+        # Only process elements with path information in string representation
+        if " / " in element_str:
+            try:
+                # Parse the string representation to extract indexed paths
+                parts = element_str.split(" / ")
+                if len(parts) < 2:
+                    continue
 
-        # Recurse
-        for child in children:
-            results.extend(find_all_properties(child))
+                # Clean up parts: remove class name and brackets
+                parts[0] = parts[0].split("[", 1)[1] if "[" in parts[0] else parts[0]
+                if "]" in parts[-1]:
+                    parts[-1] = parts[-1].split("]")[0]
 
-        return results
+                # Reconstruct cleaned path
+                clean_parts = [part.strip() for part in parts]
+                clean_path = "/".join(clean_parts).replace("//", "/")
 
-    all_props = find_all_properties(sub_obj)
-    if not all_props:
-        raise ValueError(
-            "Submodel does not contain any Property/MultiLanguageProperty elements to update."
-        )
-
-    # 5. Update the matching elements
-    for elem in all_props:
-        if elem.id_short in new_data:
-            new_val = new_data[elem.id_short]
-            if isinstance(elem, model.MultiLanguageProperty):
-                # For multi-language, store a single-language entry
-                elem.value = [{"language": "en", "text": new_val}]
-            else:
-                # For standard Property
-                if getattr(elem, "value_type", None) == Date:
-                    try:
-                        # Ensure the date is in the correct format (YYYY-MM-DD)
-                        formatted_date = datetime.strptime(
-                            new_val, "%m/%d/%Y"
-                        ).strftime("%Y-%m-%d")
-                        elem.value = from_xsd(formatted_date, Date)
-                    except Exception as e:
-                        raise ValueError(f"Could not convert {new_val} to Date: {e}")
+                # Create full path (with submodel ID) and simplified path (without ID)
+                if sub_obj.id_short:
+                    full_path = (
+                        f"{sub_obj.id_short}/{sub_obj.id}/{clean_path}"
+                        if clean_path
+                        else sub_obj.id_short
+                    )
+                    simple_path = (
+                        f"{sub_obj.id_short}/{clean_path}"
+                        if clean_path
+                        else sub_obj.id_short
+                    )
                 else:
-                    elem.value = new_val
+                    full_path = clean_path
+                    simple_path = clean_path
 
-    # 6. Update references in BaSyx, re-serialize, and persist
-    sub_obj.update()
-    provider.add(sub_obj)
+                # Clean up any remaining formatting issues
+                for path_var in [full_path, simple_path]:
+                    path_var = path_var.replace(" [", "[").replace("[ ", "[")
+                    if path_var.endswith("]") and not path_var.endswith("]]"):
+                        path_var = path_var[:-1]
 
-    updated_json = json.loads(serialize_aas_to_json(sub_obj))
-    sub_record.data = updated_json
-    sub_record.updated_at = datetime.utcnow()
-    session.add(sub_record)
-    session.commit()
-    session.refresh(sub_record)
+                # Store both path mappings
+                indexed_paths[full_path] = path
+                simplified_indexed_paths[simple_path] = path
 
-    return updated_json
+            except Exception:
+                # Skip problematic elements
+                continue
+
+    # Process updates
+    updated_elements = []
+
+    for frontend_path, new_value in new_data.items():
+        # Try multiple approaches to match the frontend path to a backend element
+        target_path = None
+        element = None
+
+        # Approach 1: Direct lookup in element map
+        if frontend_path in element_map:
+            target_path = frontend_path
+            element = element_map[frontend_path]
+
+        # Approach 2: Lookup via simplified indexed path (most common)
+        elif frontend_path in simplified_indexed_paths:
+            target_path = simplified_indexed_paths[frontend_path]
+            element = element_map[target_path]
+
+        # Approach 3: Lookup via full indexed path
+        elif frontend_path in indexed_paths:
+            target_path = indexed_paths[frontend_path]
+            element = element_map[target_path]
+
+        # Approach 4: Try normalized path matching (replace [] with /)
+        else:
+            normalized_frontend = frontend_path.replace("[", "/").replace("]", "")
+
+            # Check simplified paths first
+            for idx_path, actual_path in simplified_indexed_paths.items():
+                normalized_idx = idx_path.replace("[", "/").replace("]", "")
+                if normalized_frontend == normalized_idx:
+                    target_path = actual_path
+                    element = element_map[target_path]
+                    break
+
+            # If not found, try full paths
+            if not element:
+                for idx_path, actual_path in indexed_paths.items():
+                    normalized_idx = idx_path.replace("[", "/").replace("]", "")
+                    if normalized_frontend == normalized_idx:
+                        target_path = actual_path
+                        element = element_map[target_path]
+                        break
+
+            # Last resort: try matching by basename
+            if not element and "/" in frontend_path:
+                basename = frontend_path.split("/")[-1]
+                for path, elem in element_map.items():
+                    if path.endswith("/" + basename):
+                        target_path = path
+                        element = elem
+                        break
+
+        if not element:
+            continue
+
+        # Update the element with new value
+        try:
+            if isinstance(element, model.MultiLanguageProperty):
+                if not isinstance(new_value, list):
+                    raise ValueError("Value for MultiLanguageProperty must be an array")
+                element.value = [
+                    {"language": item["language"], "text": str(item["text"])}
+                    for item in new_value
+                ]
+            elif isinstance(element, model.File):
+                element.value = str(new_value) if new_value is not None else ""
+            elif isinstance(element, model.Property):
+                element.value = convert_value(new_value, element.value_type)
+
+            updated_elements.append(target_path)
+        except ValueError as e:
+            raise ValueError(f"Failed to update value at {frontend_path}: {e}")
+
+    if updated_elements:
+        sub_obj.update()
+        updated_json = json.loads(serialize_aas_to_json(sub_obj))
+        sub_record.data = updated_json
+        sub_record.updated_at = datetime.utcnow()
+        session.add(sub_record)
+        session.commit()
+        session.refresh(sub_record)
+        return updated_json
+    else:
+        return sub_record.data
 
 
 def attach_submodels_to_asset(

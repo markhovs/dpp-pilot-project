@@ -1,21 +1,28 @@
-import { HStack, ButtonGroup } from "@chakra-ui/react";
-import AttachSubmodel from "./AttachSubmodel";
-import RemoveSubmodel from "./RemoveSubmodel";
+import { Box, ButtonGroup } from '@chakra-ui/react';
+import AttachSubmodel from './AttachSubmodel';
+import RemoveSubmodel from './RemoveSubmodel';
+
+// Properly type the submodels
+interface Submodel {
+  id: string;
+  idShort: string;
+  description?: Array<{ language: string; text: string }>;
+}
 
 interface SubmodelActionsProps {
   aasId: string;
-  submodels: { keys: { value: string }[] }[];
+  submodels: Submodel[];
 }
 
-const SubmodelActions = ({ aasId, submodels }: SubmodelActionsProps) => {
+export default function SubmodelActions({ aasId, submodels }: SubmodelActionsProps) {
   return (
-    <HStack justify="flex-end" mt={4} mb={2}>
-      <ButtonGroup size="sm" spacing={4}>
+    <Box>
+      <ButtonGroup spacing={2}>
         <AttachSubmodel aasId={aasId} />
-        <RemoveSubmodel aasId={aasId} submodels={submodels} />
+        {submodels && submodels.length > 0 && (
+          <RemoveSubmodel aasId={aasId} submodels={submodels} />
+        )}
       </ButtonGroup>
-    </HStack>
+    </Box>
   );
-};
-
-export default SubmodelActions;
+}

@@ -17,8 +17,8 @@ import { Route as RecoverPasswordImport } from './routes/recover-password'
 import { Route as LoginImport } from './routes/login'
 import { Route as LayoutImport } from './routes/_layout'
 import { Route as LayoutIndexImport } from './routes/_layout/index'
+import { Route as DppIdImport } from './routes/dpp.$id'
 import { Route as LayoutSettingsImport } from './routes/_layout/settings'
-import { Route as LayoutItemsImport } from './routes/_layout/items'
 import { Route as LayoutAdminImport } from './routes/_layout/admin'
 import { Route as LayoutAasAasIdImport } from './routes/_layout/aas.$aasId'
 
@@ -54,13 +54,13 @@ const LayoutIndexRoute = LayoutIndexImport.update({
   getParentRoute: () => LayoutRoute,
 } as any)
 
-const LayoutSettingsRoute = LayoutSettingsImport.update({
-  path: '/settings',
-  getParentRoute: () => LayoutRoute,
+const DppIdRoute = DppIdImport.update({
+  path: '/dpp/$id',
+  getParentRoute: () => rootRoute,
 } as any)
 
-const LayoutItemsRoute = LayoutItemsImport.update({
-  path: '/items',
+const LayoutSettingsRoute = LayoutSettingsImport.update({
+  path: '/settings',
   getParentRoute: () => LayoutRoute,
 } as any)
 
@@ -102,13 +102,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LayoutAdminImport
       parentRoute: typeof LayoutImport
     }
-    '/_layout/items': {
-      preLoaderRoute: typeof LayoutItemsImport
-      parentRoute: typeof LayoutImport
-    }
     '/_layout/settings': {
       preLoaderRoute: typeof LayoutSettingsImport
       parentRoute: typeof LayoutImport
+    }
+    '/dpp/$id': {
+      preLoaderRoute: typeof DppIdImport
+      parentRoute: typeof rootRoute
     }
     '/_layout/': {
       preLoaderRoute: typeof LayoutIndexImport
@@ -126,7 +126,6 @@ declare module '@tanstack/react-router' {
 export const routeTree = rootRoute.addChildren([
   LayoutRoute.addChildren([
     LayoutAdminRoute,
-    LayoutItemsRoute,
     LayoutSettingsRoute,
     LayoutIndexRoute,
     LayoutAasAasIdRoute,
@@ -135,6 +134,7 @@ export const routeTree = rootRoute.addChildren([
   RecoverPasswordRoute,
   ResetPasswordRoute,
   SignupRoute,
+  DppIdRoute,
 ])
 
 /* prettier-ignore-end */

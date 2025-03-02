@@ -8,16 +8,15 @@ import {
 } from "@chakra-ui/react"
 import { Link } from "@tanstack/react-router"
 import { BsThreeDotsVertical } from "react-icons/bs"
-import { FiEdit, FiTrash, FiEye } from "react-icons/fi"
+import { FiEdit, FiTrash, FiEye, FiFileText } from "react-icons/fi"
 
 import EditUser from "../Admin/EditUser"
-import EditItem from "../Items/EditItem"
 import EditAAS from "../AAS/EditAAS"
 import Delete from "./DeleteAlert"
 
 // Define a flexible type for ActionsMenu props
 interface ActionsMenuProps<T extends { id: string }> {
-  type: "User" | "Item" | "AAS" // Extend as needed
+  type: "User" | "AAS" // Extend as needed
   value: T
   disabled?: boolean
 }
@@ -25,7 +24,6 @@ interface ActionsMenuProps<T extends { id: string }> {
 // Map entity types to their respective Edit components
 const editComponents: Record<ActionsMenuProps<any>["type"], React.FC<any> | undefined> = {
   User: EditUser,
-  Item: EditItem,
   AAS: EditAAS,
 }
 
@@ -54,6 +52,17 @@ const ActionsMenu = <T extends { id: string }>({ type, value, disabled }: Action
               View Instance
             </MenuItem>
           )}
+          {type === "AAS" && (
+            <MenuItem
+              as={Link}
+              to={`/dpp/${value.id}`}
+              icon={<FiFileText fontSize="16px" />}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              View DPP
+            </MenuItem>
+          )}
           {EditComponent && (
             <MenuItem onClick={editModal.onOpen} icon={<FiEdit fontSize="16px" />}>
               Edit {type}
@@ -75,8 +84,6 @@ const ActionsMenu = <T extends { id: string }>({ type, value, disabled }: Action
             onClose={editModal.onClose}
             {...(type === "User"
               ? { user: value }
-              : type === "Item"
-              ? { item: value }
               : { aas: value })}
           />
         )}

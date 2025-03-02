@@ -11,11 +11,11 @@ import { useMutation, useQueryClient } from "@tanstack/react-query"
 import React from "react"
 import { useForm } from "react-hook-form"
 
-import { ItemsService, UsersService, AasService } from "../../client"
+import { UsersService, AasService } from "../../client"
 import useCustomToast from "../../hooks/useCustomToast"
 
 interface DeleteProps {
-  type: "User" | "Item" | "AAS"
+  type: "User" | "AAS"
   id: string
   isOpen: boolean
   onClose: () => void
@@ -31,9 +31,7 @@ const Delete = ({ type, id, isOpen, onClose }: DeleteProps) => {
   } = useForm()
 
   const deleteEntity = async (id: string) => {
-    if (type === "Item") {
-      await ItemsService.deleteItem({ id })
-    } else if (type === "User") {
+    if (type === "User") {
       await UsersService.deleteUser({ userId: id })
     } else if (type === "AAS") {
       await AasService.deleteAas({ aasId: id })
@@ -61,7 +59,7 @@ const Delete = ({ type, id, isOpen, onClose }: DeleteProps) => {
     },
     onSettled: () => {
       queryClient.invalidateQueries({
-        queryKey: [type === "Item" ? "items" : type === "User" ? "users" : "aas"],
+        queryKey: [type === "User" ? "users" : "aas"],
       })
     },
   })
@@ -85,7 +83,7 @@ const Delete = ({ type, id, isOpen, onClose }: DeleteProps) => {
           <AlertDialogBody>
             {type === "User" && (
               <span>
-                All items associated with this user will also be{" "}
+                This user will be{" "}
                 <strong>permanently deleted. </strong>
               </span>
             )}

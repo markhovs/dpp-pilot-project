@@ -20,16 +20,12 @@ import type {
   AasDeleteAasResponse,
   AasGetAasData,
   AasGetAasResponse,
-  ItemsReadItemsData,
-  ItemsReadItemsResponse,
-  ItemsCreateItemData,
-  ItemsCreateItemResponse,
-  ItemsReadItemData,
-  ItemsReadItemResponse,
-  ItemsUpdateItemData,
-  ItemsUpdateItemResponse,
-  ItemsDeleteItemData,
-  ItemsDeleteItemResponse,
+  DppListDppSectionsData,
+  DppListDppSectionsResponse,
+  DppGetDppSectionData,
+  DppGetDppSectionResponse,
+  DppDownloadCompleteDppData,
+  DppDownloadCompleteDppResponse,
   LoginLoginAccessTokenData,
   LoginLoginAccessTokenResponse,
   LoginTestTokenResponse,
@@ -97,7 +93,7 @@ export class AasService {
    * Create a new AAS from selected submodel templates
    * Create a new AAS instance by attaching one or more submodel templates.
    * - **template_ids**: A list of template identifiers (as defined in the template metadata) to attach.
-   * - **asset_data**: Optional additional asset metadata (e.g. custom AAS id, global asset id, asset kind).
+   * - **asset_data**: Optional additional asset metadata (e.g. global asset id, display name, description).
    * This endpoint is restricted to superusers.
    * @param data The data for the request.
    * @param data.requestBody
@@ -272,25 +268,35 @@ export class AasService {
   }
 }
 
-export class ItemsService {
+export class DppService {
   /**
-   * Read Items
-   * Retrieve items.
+   * List available DPP sections
+   * Get available DPP sections and their metadata.
+   *
+   * Args:
+   * aas_id: ID of the AAS to generate DPP for
+   * status_filter: Optional filter for section status
+   * session: Database session dependency
+   *
+   * Returns:
+   * List of available DPP sections with their status
    * @param data The data for the request.
-   * @param data.skip
-   * @param data.limit
-   * @returns ItemsPublic Successful Response
+   * @param data.aasId ID of the AAS to generate DPP for
+   * @param data.statusFilter Filter sections by status (available, incomplete)
+   * @returns DPPSectionInfo List of available DPP sections with their status
    * @throws ApiError
    */
-  public static readItems(
-    data: ItemsReadItemsData = {},
-  ): CancelablePromise<ItemsReadItemsResponse> {
+  public static listDppSections(
+    data: DppListDppSectionsData,
+  ): CancelablePromise<DppListDppSectionsResponse> {
     return __request(OpenAPI, {
       method: "GET",
-      url: "/api/v1/items/",
+      url: "/api/v1/dpp/{aas_id}/sections",
+      path: {
+        aas_id: data.aasId,
+      },
       query: {
-        skip: data.skip,
-        limit: data.limit,
+        status_filter: data.statusFilter,
       },
       errors: {
         422: "Validation Error",
@@ -299,43 +305,36 @@ export class ItemsService {
   }
 
   /**
-   * Create Item
-   * Create new item.
+   * Get DPP section content
+   * Get detailed content for a specific DPP section.
+   *
+   * Args:
+   * aas_id: ID of the AAS
+   * section_id: ID of the section to retrieve
+   * include_raw: Whether to include raw data in the response
+   * session: Database session dependency
+   *
+   * Returns:
+   * Detailed content of the requested DPP section
    * @param data The data for the request.
-   * @param data.requestBody
-   * @returns ItemPublic Successful Response
+   * @param data.aasId ID of the AAS
+   * @param data.sectionId ID of the section to retrieve
+   * @param data.includeRaw Whether to include raw data in the response
+   * @returns DPPSection Detailed content of the requested DPP section
    * @throws ApiError
    */
-  public static createItem(
-    data: ItemsCreateItemData,
-  ): CancelablePromise<ItemsCreateItemResponse> {
-    return __request(OpenAPI, {
-      method: "POST",
-      url: "/api/v1/items/",
-      body: data.requestBody,
-      mediaType: "application/json",
-      errors: {
-        422: "Validation Error",
-      },
-    })
-  }
-
-  /**
-   * Read Item
-   * Get item by ID.
-   * @param data The data for the request.
-   * @param data.id
-   * @returns ItemPublic Successful Response
-   * @throws ApiError
-   */
-  public static readItem(
-    data: ItemsReadItemData,
-  ): CancelablePromise<ItemsReadItemResponse> {
+  public static getDppSection(
+    data: DppGetDppSectionData,
+  ): CancelablePromise<DppGetDppSectionResponse> {
     return __request(OpenAPI, {
       method: "GET",
-      url: "/api/v1/items/{id}",
+      url: "/api/v1/dpp/{aas_id}/section/{section_id}",
       path: {
-        id: data.id,
+        aas_id: data.aasId,
+        section_id: data.sectionId,
+      },
+      query: {
+        include_raw: data.includeRaw,
       },
       errors: {
         422: "Validation Error",
@@ -344,47 +343,33 @@ export class ItemsService {
   }
 
   /**
-   * Update Item
-   * Update an item.
+   * Download complete DPP in JSON format
+   * Download complete DPP in JSON format.
+   *
+   * Args:
+   * aas_id: ID of the AAS to generate DPP for
+   * include_raw: Whether to include raw data in the output
+   * session: Database session dependency
+   *
+   * Returns:
+   * Complete DPP document with all available sections
    * @param data The data for the request.
-   * @param data.id
-   * @param data.requestBody
-   * @returns ItemPublic Successful Response
+   * @param data.aasId ID of the AAS to generate DPP for
+   * @param data.includeRaw Whether to include raw data in the output
+   * @returns CompleteDPP Complete DPP document with all available sections
    * @throws ApiError
    */
-  public static updateItem(
-    data: ItemsUpdateItemData,
-  ): CancelablePromise<ItemsUpdateItemResponse> {
+  public static downloadCompleteDpp(
+    data: DppDownloadCompleteDppData,
+  ): CancelablePromise<DppDownloadCompleteDppResponse> {
     return __request(OpenAPI, {
-      method: "PUT",
-      url: "/api/v1/items/{id}",
+      method: "GET",
+      url: "/api/v1/dpp/{aas_id}/download",
       path: {
-        id: data.id,
+        aas_id: data.aasId,
       },
-      body: data.requestBody,
-      mediaType: "application/json",
-      errors: {
-        422: "Validation Error",
-      },
-    })
-  }
-
-  /**
-   * Delete Item
-   * Delete an item.
-   * @param data The data for the request.
-   * @param data.id
-   * @returns Message Successful Response
-   * @throws ApiError
-   */
-  public static deleteItem(
-    data: ItemsDeleteItemData,
-  ): CancelablePromise<ItemsDeleteItemResponse> {
-    return __request(OpenAPI, {
-      method: "DELETE",
-      url: "/api/v1/items/{id}",
-      path: {
-        id: data.id,
+      query: {
+        include_raw: data.includeRaw,
       },
       errors: {
         422: "Validation Error",
