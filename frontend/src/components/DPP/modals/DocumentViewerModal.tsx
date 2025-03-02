@@ -31,7 +31,7 @@ const DocumentViewerModal: React.FC<DocumentViewerModalProps> = ({
 }) => {
   if (!selectedDocument) return null;
 
-  const { file, title, contentType, description, metadata, ...otherProps } = selectedDocument;
+  const { file, title, contentType, description, metadata } = selectedDocument;
 
   if (!file) return null;
 

@@ -235,7 +235,7 @@ const TechnicalSection: React.FC<TechnicalSectionProps> = ({
   };
 
   // Helper to render the actual value content
-  const renderPropertyValueContent = (value: any) => {
+  const renderPropertyValueContent = (value: any): React.ReactNode => {
     // Handle simple string/number/boolean values
     if (typeof value !== 'object') {
       // Handle URLs specially

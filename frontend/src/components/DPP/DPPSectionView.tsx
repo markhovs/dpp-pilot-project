@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Box, Heading, Text } from "@chakra-ui/react";
-import { DPPSection, DPPSectionId } from "../../types/dpp";
+import { DPPSection } from "../../types/dpp";
 
 // Import section components
 import IdentificationSection from "./sections/IdentificationSection";

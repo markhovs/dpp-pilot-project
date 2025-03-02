@@ -1039,8 +1039,8 @@ class MaterialSection(BaseDPPSection):
         if not entity_node or not isinstance(entity_node, dict):
             return {}
 
-        # Generate unique ID for cycle detection
-        node_id = f"{entity_node.get("idShort", '')}-{id(entity_node)}"
+        # Generate unique ID for cycle detection - FIX THE QUOTES HERE
+        node_id = f"{entity_node.get('idShort', '')}-{id(entity_node)}"
         if node_id in visited_nodes:
             return {"id": entity_node.get("idShort", "Recursive"), "type": "Reference"}
 

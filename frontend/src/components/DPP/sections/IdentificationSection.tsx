@@ -41,7 +41,6 @@ const IdentificationSection: React.FC<IdentificationSectionProps> = ({
   const { product = {}, manufacturer = {}, versions = {}, additionalData = null } = data;
 
   const cardBg = useColorModeValue('white', 'gray.700');
-  const borderColor = useColorModeValue('gray.200', 'gray.600');
   const labelColor = useColorModeValue('gray.500', 'gray.400');
   const accentBg = useColorModeValue('blue.50', 'blue.900');
   const secondaryBg = useColorModeValue('purple.50', 'purple.900');
